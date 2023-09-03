@@ -10,10 +10,10 @@
 Для первого запуска в docker-compose.yml нужно раскомментировать строки с командой для Mysql.
 Команда выполняет первоначальние настройки mysql.
 После успешного старта на контейнере с Mysql требуется выполнить команды:
-CREATE USER 'exporter'@'%' IDENTIFIED BY 'exporter';
-GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'exporter'@'%';
-GRANT SELECT ON performance_schema.* TO 'exporter'@'%';
-GRANT SELECT, RELOAD, SUPER, LOCK TABLES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'exporter'@'%';
+CREATE USER 'user_for_exporter_db'@'%' IDENTIFIED BY 'pass_for_exporter_db';
+GRANT PROCESS, REPLICATION CLIENT ON *.* TO 'user_for_exporter_db'@'%';
+GRANT SELECT ON performance_schema.* TO 'user_for_exporter_db'@'%';
+GRANT SELECT, RELOAD, SUPER, LOCK TABLES, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'user_for_exporter_db'@'%';
 Эти команды создадут юзера для сбора метрик с mysql.
 Затем строки с командой нужно закомментировать и перезапусть контейнер с Mysql.
 
