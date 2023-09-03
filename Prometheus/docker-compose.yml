@@ -1,0 +1,207 @@
+version: '2'
+services:
+
+    db-wp:
+        image: mysql:8
+        container_name: db-wp
+        restart: no
+        networks:
+            - net
+        expose:
+            - "3306"
+        env_file:
+            - .env            
+        environment:
+            - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASS}
+            - MYSQL_DATABASE=${WP_DB_NAME}
+            - MYSQL_USER=${WP_DB_USER}
+            - MYSQL_PASSWORD=${WP_DB_PASS}
+        volumes:
+            - db-wp-data:/var/lib/mysql
+        # command:
+            # - --default-authentication-plugin=mysql_native_password
+
+    wp:
+        image: wordpress:6-fpm
+        container_name: wp
+        restart: no
+        networks:
+            - net
+        expose:
+            - "9000"
+        env_file:
+            - .env                
+        environment:
+            - WORDPRESS_DB_HOST=${DB_HOST}
+            - WORDPRESS_DB_NAME=${WP_DB_NAME}
+            - WORDPRESS_DB_USER=${WP_DB_USER}
+            - WORDPRESS_DB_PASSWORD=${WP_DB_PASS}
+        volumes:
+            - wp-data:/var/www/html
+            - ${PHP_CONF}:/usr/local/etc/php-fpm.d/www.conf:ro
+        depends_on:
+            - db-wp
+            
+    nginx-wp:
+        image: nginx:stable
+        container_name: nginx-wp
+        restart: no
+        networks:
+            - net
+        ports:
+            - "8080:80"
+        env_file:
+            - .env       
+        volumes:
+            - wp-data:/var/www/html
+            - ${NGINX_CONF}:/etc/nginx/nginx.conf:ro
+        depends_on:
+            - wp
+            
+    promethey:
+        image: prom/prometheus:main
+        container_name: promethey
+        restart: no
+        networks:
+            - net
+        ports:
+            - "9090:9090"
+        env_file:
+            - .env        
+        volumes:
+            - ${YML_INSERT}:/etc/prometheus/:ro
+            - promethey-data:/prometheus
+        command:
+            - '--web.config.file=/etc/prometheus/web.yml'
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            
+    graf:
+        image: grafana/grafana:main
+        container_name: graf
+        restart: no
+        networks:
+            - net
+        ports:
+            - "3000:3000"
+        env_file:
+            - .env            
+        environment:
+            - GF_SECURITY_ADMIN_USER=${GF_USER}
+            - GF_SECURITY_ADMIN_PASSWORD=${GF_PASS}
+            - GF_USERS_ALLOW_SIGN_UP=${GF_ALLOW}
+        volumes:
+            - graf-data:/var/lib/grafana
+                        
+    exporter-nginx-wp:
+        image: nginx/nginx-prometheus-exporter
+        container_name: exporter-nginx-wp
+        restart: no
+        networks:
+            - net
+        expose:
+            - "9113"
+        env_file:
+            - .env
+        environment:
+            - SCRAPE_URI=${SCRAPE_URI}      
+        depends_on:
+            - nginx-wp
+            
+    exporter-fpm:
+        image: bakins/php-fpm-exporter:v0.6.1
+        container_name: exporter-fpm
+        restart: no
+        networks:
+            - net
+        expose:
+            - "9114"
+        command: ["--endpoint", "${PHP_FPM_SCRAPE_URI}", "--addr", "0.0.0.0:9114"]
+        depends_on:
+            - nginx-wp
+            
+    exporter-cadvisor:
+        image: google/cadvisor:latest
+        container_name: exporter-cadvisor
+        restart: no
+        networks:
+            - net
+        expose:
+            - "8080"
+        volumes:
+          - /:/rootfs:ro
+          - /var/run:/var/run:ro
+          - /sys:/sys:ro
+          - /var/lib/docker/:/var/lib/docker:ro
+          - /dev/disk/:/dev/disk:ro
+          
+    exporter-node:
+        image: prom/node-exporter:latest
+        container_name: exporter-node
+        restart: no
+        networks:
+          - net
+        expose:
+            - "9100"
+        volumes:
+          - /proc:/host/proc:ro
+          - /sys:/host/sys:ro
+          # - /:/rootfs:ro
+        command:
+          - '--path.procfs=/host/proc'
+          # - '--path.rootfs=/rootfs'
+          - '--path.sysfs=/host/sys'
+          # - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+          - --collector.filesystem.ignored-mount-points
+          - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+               
+    exporter-db-wp:
+        image: prom/mysqld-exporter:main
+        container_name: exporter-db-wp
+        restart: no
+        networks:
+            - net
+        expose:
+            - "9104"
+        env_file:
+            - .env
+        command:
+            - "--mysqld.username=${EXPORTER_DB_USER}:${EXPORTER_DB_PASS}"
+            - "--mysqld.address=${DB_HOST}"
+        depends_on:
+            - db-wp
+            
+    exporter-container:
+        image: prom/container-exporter
+        container_name: exporter-container
+        restart: no
+        networks:
+            - net
+        expose:
+            - "9104"
+        volumes:
+            - /sys/fs/cgroup:/cgroup:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+          
+    exporter-blackbox:
+        image: prom/blackbox-exporter:master
+        container_name: exporter-blackbox
+        restart: no
+        networks:
+            - net
+        expose:
+            - "9115"
+        env_file:
+            - .env
+        volumes:
+            - ${BLACKBOX_CONF}:/config.yml:ro
+                   
+                  
+networks:
+    net:
+        driver: bridge
+
+volumes:
+    db-wp-data:
+    wp-data:
+    promethey-data:
+    graf-data:
