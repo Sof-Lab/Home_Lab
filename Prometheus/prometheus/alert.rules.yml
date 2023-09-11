@@ -1,0 +1,84 @@
+groups:
+  - name: Prometheus
+    rules:
+    
+    - alert: Prometheus_Target_Missing
+      expr: up{job=~".*"} == 0
+      for: 5s
+      labels:
+        severity: warning
+      annotations:
+        summary: "Something Down"
+        description: "The Target '{{$labels.job}}' has not been reachable for the 5 seconds"
+        
+    - alert: Prometheus_Target_Empty
+      expr: prometheus_sd_discovered_targets == 0
+      for: 5s
+      labels:
+        severity: warning
+      annotations:
+        summary: Prometheus target empty (instance {{$labels.instance}})
+        description: "Prometheus has no target in service discovery\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        
+    - alert: Alertmanager_Notification_Failing
+      expr: rate(alertmanager_notifications_failed_total[1m]) > 0
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: Prometheus AlertManager notification failing (instance {{$labels.instance}})
+        description: "Alertmanager is failing sending notifications\n  VALUE = {{$value}}\n  LABELS = {{$labels}}"
+        
+        
+  - name: Containers
+    rules:
+        
+    - alert: Container_Killed
+      expr: time() - container_last_seen > 10
+      for: 5s
+      labels:
+        severity: warning
+      annotations:
+        summary: Container killed or was restarted (instance {{$labels.instance}})
+        description: "A container has disappeared"
+        
+    - alert: Container_Volume_Usage
+      expr: (1 - (sum(container_fs_inodes_free{name!=""}) BY (instance) / sum(container_fs_inodes_total) BY (instance))) * 100 > 80
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: Container Volume usage (instance {{$labels.instance}})
+        description: "Container Volume usage is above 80%\n  VALUE = {{$value}}\n  LABELS = {{$labels}}"
+          
+    - alert: Blackbox_Probe_Failed
+      expr: probe_success == 0
+      for: 5s
+      labels:
+        severity: warning
+      annotations:
+        summary: Blackbox probe failed
+        description: "Probe failed\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        
+        
+  - name: Host
+    rules:
+        
+    - alert: Windows_Server_Cpu_Usage
+      expr: 100 - (avg by (instance) (rate(windows_cpu_time_total{mode="idle"}[2m])) * 100) > 80
+      for: 0m
+      labels:
+        severity: critical
+      annotations:
+        summary: Windows Server CPU Usage (instance {{$labels.instance}})
+        description: "CPU Usage is more than 80%\n  VALUE = {{ $value }}\n  LABELS = {{$labels}}"
+        
+    - alert: Windows_Server_Memory_Usage
+      expr: 100 - ((windows_os_physical_memory_free_bytes / windows_cs_physical_memory_bytes) * 100) > 80
+      for: 2m
+      labels:
+        severity: critical
+      annotations:
+        summary: Windows Server memory Usage (instance {{ $labels.instance }})
+        description: "Memory usage is more than 80%\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+        

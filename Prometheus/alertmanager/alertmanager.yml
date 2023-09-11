@@ -1,0 +1,34 @@
+global:
+  # resolve_timeout: 1m
+    
+route:
+  group_by: ['alertname']
+  group_wait: 5s
+  repeat_interval: 1m
+  receiver: 'telegram'
+  
+  routes:
+    - receiver: "telegram"
+      group_wait: 5s
+      match_re:
+        severity: warning
+      continue: true
+
+    - receiver: "telegram_chat"
+      group_wait: 5s
+      match_re:
+        severity: critical
+      continue: true  
+  
+receivers:
+  - name: 'telegram'
+    telegram_configs:
+      - chat_id: 'Telegram_chat_id_1'
+        # parse_mode: 'Markdown'
+        bot_token: 'bot_id:bot_token'
+  - name: 'telegram_chat'
+    telegram_configs:
+      - chat_id: 'Telegram_chat_id_2'
+        # parse_mode: 'MarkdownV2'
+        bot_token: 'bot_id:bot_token'
+        
