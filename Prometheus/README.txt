@@ -31,3 +31,5 @@ GRANT SELECT, RELOAD, SUPER, LOCK TABLES, REPLICATION SLAVE, REPLICATION CLIENT 
 3. Создан alertmanager.yml для настройки отправки уведомлений в два канала telagram.
 4. Скорректирован prometheus.yml для использования alertmanager и alert.rules.yml.
 5. В grafana добавлен источник данных alertmanager и дашборд для визуализации работы alertmanager.
+
+В папке examples скриншоты пришедших алертов.
