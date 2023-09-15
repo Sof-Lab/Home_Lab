@@ -210,8 +210,23 @@ services:
             - alertmanager-data:/alertmanager
         command:
             - '--config.file=/etc/alertmanager/alertmanager.yml'
-                   
-                  
+  
+    victoria:
+        image: victoriametrics/victoria-metrics:v1.93.4
+        container_name: victoria
+        restart: no
+        networks:
+            - net
+        ports:
+            - "8428:8428"
+        volumes:
+            - victoria-data:/storage
+        command:
+            - '--storageDataPath=/storage'
+            - '--httpListenAddr=:8428'
+            - '--retentionPeriod=2w'
+ 
+
 networks:
     net:
         driver: bridge
@@ -222,3 +237,4 @@ volumes:
     promethey-data:
     graf-data:
     alertmanager-data:
+    victoria-data:

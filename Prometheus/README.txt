@@ -23,7 +23,6 @@ GRANT SELECT, RELOAD, SUPER, LOCK TABLES, REPLICATION SLAVE, REPLICATION CLIENT 
 
 В Grafana экспортируются дашборды для визуализации данных.
 ------------------------------------------------------------------------------------------------------------------------
-
 ДЗ #2
 
 1. В файл docker-compose.yml добавлен контейнер alertmanager.
@@ -33,3 +32,9 @@ GRANT SELECT, RELOAD, SUPER, LOCK TABLES, REPLICATION SLAVE, REPLICATION CLIENT 
 5. В grafana добавлен источник данных alertmanager и дашборд для визуализации работы alertmanager.
 
 В папке examples скриншоты пришедших алертов.
+------------------------------------------------------------------------------------------------------------------------
+ДЗ #3
+
+1. В docker-compose.yml добавлен контейнер victoria (victoria metrics).
+2. В файл prometheus.yml добавлены настройки external_lables, remote_write, добавлен таргет victoria.
+3. В grafana добавлен источник victoria, добавлен дашборд для таргета victoria, добавлены дашборды для экспортеров с источником victoria для проверки.
