@@ -2,8 +2,8 @@
 
 1. Сконфигурирован файл docker-compose.yml.
 2. Создан файл .env для использования переменных в docker-compose.
-3. Создан файл discovery.sh со скриптом, который отдает перечень созданных метрик.
-4. Создан файл script.sh со скриптом, который отдает значение созданных метрик.
+3. Создан файл discovery.sh со скриптом, который отдает перечень созданных метрик (в папке zabbix).
+4. Создан файл script.sh со скриптом, который отдает значение созданных метрик (в папке zabbix).
 5. Изменен файл zabbix_agent.conf: добавлены UserParametr, которые обращаются к созданным скриптам:
 UserParameter=otus_metrics.discovery,bash /usr/local/discovery.sh
 UserParameter=otus_metrics.[*],bash /usr/local/script.sh $1
