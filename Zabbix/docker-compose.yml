@@ -1,0 +1,87 @@
+version: '2'
+services:
+
+    zabbix-db:
+        image: postgres:14-alpine
+        container_name: zabbix-db
+        restart: no
+        networks:
+            - zabbix
+        ports:
+            - "5432:5432"
+        env_file:
+            - .env
+        environment:
+            - POSTGRES_DB=${PGSQL_DB}
+            - POSTGRES_USER=${PGSQL_USER}
+            - POSTGRES_PASSWORD=${PGSQL_PASS}
+        volumes:
+            - zabbix-db-data:/var/lib/postgresql/data
+            
+    zabbix:
+        image: zabbix/zabbix-server-pgsql:ubuntu-6.4-latest
+        container_name: zabbix
+        restart: no
+        networks:
+            - zabbix
+        ports:
+            - "10051:10051"
+        env_file:
+            - .env
+        environment:
+            - DB_SERVER_HOST=${PGSQL_HOST}
+            - POSTGRES_DB=${PGSQL_DB}
+            - POSTGRES_USER=${PGSQL_USER}
+            - POSTGRES_PASSWORD=${PGSQL_PASS}
+            - ZBX_DEBUGLEVEL=5
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - zabbix-data-export:/var/lib/zabbix/export
+            - zabbix-data-snmptraps:/var/lib/zabbix/snmptraps
+        depends_on:
+            - zabbix-db
+            
+    zabbix-web:
+        image: zabbix/zabbix-web-nginx-pgsql:ubuntu-6.4-latest
+        container_name: zabbix-web
+        restart: no
+        networks:
+            - zabbix
+        ports:
+            - "80:8080"
+        env_file:
+            - .env
+        environment:
+            - DB_SERVER_HOST=${PGSQL_HOST}
+            - ZBX_SERVER_HOST=${ZABBIX_HOST}
+            - POSTGRES_DB=${PGSQL_DB}
+            - POSTGRES_USER=${PGSQL_USER}
+            - POSTGRES_PASSWORD=${PGSQL_PASS}
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+        depends_on:
+            - zabbix-db
+            - zabbix
+            
+    zabbix-agent:
+        image: zabbix/zabbix-agent:ubuntu-6.4-latest
+        container_name: zabbix-agent
+        restart: no
+        networks:
+            - zabbix
+        expose:
+            - "10050"
+        volumes:
+            - /etc/localtime:/etc/localtime:ro
+            - ${AGENT_CONF}:/etc/zabbix/zabbix_agentd.conf:ro
+            - ${SCRIPT}:/usr/local/script.sh:ro
+            - ${DISCOVERY}:/usr/local/discovery.sh:ro
+
+networks:
+    zabbix:
+        driver: bridge
+
+volumes:
+    zabbix-db-data:
+    zabbix-data-export:
+    zabbix-data-snmptraps:
