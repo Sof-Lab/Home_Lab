@@ -1,0 +1,74 @@
+version: '2.2'
+services:
+
+    elastic:
+        image: elasticsearch:8.9.2
+        container_name: elastic
+        restart: no
+        networks:
+            - elk
+        ports:
+            - "9200:9200"
+        environment:
+            - node.name=elastic
+            # - cluster.name=es-docker-cluster
+            # - discovery.seed_hosts=es-warm
+            - cluster.initial_master_nodes=elastic
+            - bootstrap.memory_lock=true
+            - xpack.security.enabled=false
+            - xpack.security.http.ssl.enabled=false
+            - xpack.security.transport.ssl.enabled=false
+            - xpack.security.transport.ssl.verification_mode=none
+            - "ES_JAVA_OPTS=-Xms768m -Xmx768m"
+        volumes:
+            - elastic-data:/usr/share/elasticsearch/data
+            - elastic-yml:/usr/share/elasticsearch/config
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+            nofile:
+                soft: 65536
+                hard: 65536
+
+    kibana:
+        image: kibana:8.9.2
+        container_name: kibana
+        restart: no
+        networks:
+            - elk
+        ports:
+            - "5601:5601"
+        volumes:
+            - kibana-yml:/usr/share/kibana/config
+        depends_on:
+            - elastic
+
+
+    logstash:
+        image: logstash:8.9.2
+        container_name: logstash
+        restart: no
+        networks:
+            - elk
+        ports:
+            - "5046:5046"
+            - "10514:10514"
+        volumes:
+            - logstash-conf:/usr/share/logstash/pipeline
+            - logstash-yml:/usr/share/logstash/config
+        depends_on:
+            - elastic
+
+
+volumes:
+    elastic-data:
+    elastic-yml:
+    kibana-yml:
+    logstash-conf:
+    logstash-yml:
+
+networks:
+    elk:
+        driver: bridge
+ 
