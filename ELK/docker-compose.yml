@@ -59,6 +59,41 @@ services:
             - logstash-yml:/usr/share/logstash/config
         depends_on:
             - elastic
+            
+    heartbeat:
+        image: elastic/heartbeat:8.9.2
+        container_name: heartbeat
+        restart: no
+        networks:
+            - elk
+        volumes:
+            - heartbeat-yml:/usr/share/heartbeat
+        depends_on:
+            - kibana
+            
+    metricbeat:
+        image: elastic/metricbeat:8.9.2
+        container_name: metricbeat
+        restart: no
+        networks:
+            - elk
+        volumes:
+            - metricbeat-yml:/usr/share/metricbeat
+            - /proc:/hostfs/proc:ro
+        depends_on:
+            - kibana
+            
+    filebeat:
+        image: elastic/filebeat:8.9.2
+        container_name: filebeat
+        restart: no
+        networks:
+            - elk
+        volumes:
+            - filebeat-yml:/usr/share/filebeat
+            - /var/log:/var/log:ro
+        depends_on:
+            - kibana
 
 
 volumes:
@@ -67,6 +102,9 @@ volumes:
     kibana-yml:
     logstash-conf:
     logstash-yml:
+    heartbeat-yml:
+    metricbeat-yml:
+    filebeat-yml:
 
 networks:
     elk:
