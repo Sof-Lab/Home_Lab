@@ -95,6 +95,20 @@ services:
         depends_on:
             - kibana
 
+    vector:
+        image: timberio/vector:0.33.X-alpine
+        container_name: vector
+        restart: no
+        networks:
+            - elk
+        ports:
+            - "10515:10515"
+        volumes:
+            - vector-yml:/etc/vector
+        depends_on:
+            - kibana
+    
+
 
 volumes:
     elastic-data:
@@ -105,8 +119,8 @@ volumes:
     heartbeat-yml:
     metricbeat-yml:
     filebeat-yml:
+    vector-yml:
 
 networks:
     elk:
         driver: bridge
- 

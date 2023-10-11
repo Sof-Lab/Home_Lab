@@ -1,0 +1,44 @@
+#                                    __   __  __
+#                                    \ \ / / / /
+#                                     \ V / / /
+#                                      \_/  \/
+#
+#                                    V E C T O R
+#                                   Configuration
+#
+# ------------------------------------------------------------------------------
+# Website: https://vector.dev
+# Docs: https://vector.dev/docs
+# Chat: https://chat.vector.dev
+# ------------------------------------------------------------------------------
+
+sources:
+  rsyslog:
+    type: "syslog"
+    address: "0.0.0.0:10515"
+    mode: "tcp"
+
+transforms:  
+  filtering:
+    type: filter
+    inputs:
+      - rsyslog
+    condition: .appname == "sshd" && .facility == "auth"  
+  rename:
+    type: remap
+    inputs:
+      - filtering
+    source: |-
+      del(.hostname)
+      del(.procid)
+      del(.source_ip)
+      del(.procid)
+      .message = parse_regex!(.message, r'^(?P<log>\D*)(?P<source_login>(\S*))')
+
+sinks:
+  elastic:
+    type: "elasticsearch"
+    inputs: ["rename"]
+    endpoints: ["http://elastic:9200"]    
+    bulk:
+      index: "vector-ssh-%Y-%m-%d"
