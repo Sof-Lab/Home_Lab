@@ -1,13 +1,10 @@
 
 ENV['VAGRANT_SERVER_URL'] = 'http://vagrant.elab.pro'
-
 Vagrant.configure("2") do |config|
-
 	config.vm.box = "centos/7"
 	config.vm.box_check_update = false
 
 	config.vm.define "kern_updt" do |kern_updt|
-
 		kern_updt.vm.hostname = "kern-updt"				# hostname
 		kern_updt.vm.provider "virtualbox" do |v|
 			v.name = "kern_updt" 					# имя в VB
@@ -19,7 +16,6 @@ Vagrant.configure("2") do |config|
 	
 	config.vm.define "kern_new" do |kern_new|
 		kern_new.vm.hostname = "kern-new"				# hostname
-
 		kern_new.vm.provider "virtualbox" do |v|
 			v.name = "kern_new2" 					# имя в VB
 			v.memory = "2048"
@@ -27,5 +23,4 @@ Vagrant.configure("2") do |config|
 			v.gui = false
 		end
 	end
-	
 end
