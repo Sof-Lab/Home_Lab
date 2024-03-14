@@ -57,19 +57,19 @@ gcc (GCC) 8.3.1 20190311 (Red Hat 8.3.1-3)
 ```console
 $ sudo make oldconfig
 $ sudo make
-$ make modules_install install
+$ sudo make modules_install install
 
-$ vi /etc/default/grub
+$ sudo vi /etc/default/grub
 
 ...
 GRUB_DEFAULT=0
 ...
 
-$ grub2-mkconfig -o /boot/grub2/grub.cfg
+$ sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 $ sudo reboot
 
 $ uname -r
 6.8.0
 $ uname -a
-Linux kern-new 6.8.0 #1 SMP PREEMPT_DYNAMIC Wed Mar 13 22:03:47 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
+Linux kern-new 6.8.0 #1 SMP PREEMPT_DYNAMIC Thu Mar 14 20:55:10 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
 ```
