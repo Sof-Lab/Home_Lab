@@ -1,5 +1,6 @@
 
 ENV['VAGRANT_SERVER_URL'] = 'http://vagrant.elab.pro'
+
 Vagrant.configure("2") do |config|
 	config.vm.box = "centos/7"
 	config.vm.box_check_update = false
