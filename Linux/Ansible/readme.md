@@ -35,14 +35,15 @@ Host nginx
 Проверка дополнительно проброшенного порта `ssh-for-wsl` для доступа к ВМ из wsl:
 
 ![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Ansible/%D0%9F%D1%80%D0%BE%D0%B1%D1%80%D0%BE%D1%81%20%D0%BF%D0%BE%D1%80%D1%82%D0%BE%D0%B2%20VirtualBox.png)
+
 *192.168.1.6 - ip-адрес хост-машины Windows.*
 *Именно эти параметры будут использованы для подключения к ВМ из wsl.*
 
 ### 2. Созданы файлы hosts.yaml и ansible.cfg.
 
-Файлы расположены в директории wsl для работы с Ansible.
+Файлы расположены в директории wsl для работы с ansible.
 У меня это - /home/sof/for_ansible.
-В hosts.yaml прописан localhost для выполнения команд в wsl (для переноса private_key из директории Windows в директорию Ansible).
+В hosts.yaml прописан localhost для выполнения команд в wsl (для переноса private_key из директории windows в директорию ansible).
 Подключение к nginx прописано через хост Windows, так как напрямую из wsl ВМ на хостовой машине недоступны.
 Используется дополнительно проброшенный порт.
 
@@ -64,69 +65,81 @@ nginx | SUCCESS => {
     },
     "changed": false,
     "ping": "pong"
-
-
-Проверка
-
-```console
-$ uname -r
-3.10.0-1127.el7.x86_64
-
-$ sudo yum -y install https://www.elrepo.org/elrepo-release-7.el7.elrepo.noarch.rpm
-$ sudo yum --enablerepo elrepo-kernel install kernel-ml
-$ sudo grub2-mkconfig -o /boot/grub2/grub.cfg
-$ sudo grub2-set-default 0
-$ sudo reboot
-
-$ uname -r
-6.7.9-1.el7.elrepo.x86_64
 ```
 
-3. На ВМ kern_new собрано ядро из исходников при помощи действий:
+### 3. Настройка nginx при помощи ansible.
+
+Playbook nginx.yml запускается ди wsl.
 
 ```console
-$ uname -r
-3.10.0-1127.el7.x86_64
+$ ansible-playbook nginx.yml
 
-$ sudo yum install -y ncurses-devel make gcc bc bison flex elfutils-libelf-devel openssl-devel grub2 wget
-$ wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.8.tar.xz
-$ sudo tar -xvf linux-6.8.tar.xz -C /usr/src
-$ cd /usr/src/linux-6.8/
-$ sudo yum -y groupinstall "Development Tools"
+PLAY [WSL localhost copy private_key for ansible] **********************************************************
+
+TASK [Gathering Facts] *************************************************************************************
+ok: [wsl]
+
+TASK [Create directory for private_key] ********************************************************************
+changed: [wsl]
+
+TASK [Copy private_key file] *******************************************************************************
+changed: [wsl]
+
+TASK [Change permissions for private_key] ******************************************************************
+changed: [wsl]
+
+PLAY [NGINX | Install and configure NGINX] *****************************************************************
+
+TASK [Gathering Facts] *************************************************************************************
+ok: [nginx]
+
+TASK [Add epel-release] ************************************************************************************
+changed: [nginx]
+
+TASK [update] **********************************************************************************************
+changed: [nginx]
+
+TASK [NGINX | Install NGINX] *******************************************************************************
+changed: [nginx]
+
+TASK [NGINX | Create NGINX config file from template] ******************************************************
+changed: [nginx]
+
+RUNNING HANDLER [restart nginx] ****************************************************************************
+changed: [nginx]
+
+RUNNING HANDLER [reload nginx] *****************************************************************************
+changed: [nginx]
+
+PLAY RECAP *************************************************************************************************
+nginx                      : ok=7    changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+wsl                        : ok=4    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+```
+Проверка статуса nginx:
+
+```console
+[vagrant@nginx ~]$ systemctl status nginx
+● nginx.service - The nginx HTTP and reverse proxy server
+   Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; vendor preset: disabled)
+   Active: active (running) since Sat 2024-04-06 16:02:14 UTC; 15s ago
+  Process: 15173 ExecReload=/usr/sbin/nginx -s reload (code=exited, status=0/SUCCESS)
+  Process: 15093 ExecStart=/usr/sbin/nginx (code=exited, status=0/SUCCESS)
+  Process: 15091 ExecStartPre=/usr/sbin/nginx -t (code=exited, status=0/SUCCESS)
+  Process: 15090 ExecStartPre=/usr/bin/rm -f /run/nginx.pid (code=exited, status=0/SUCCESS)
+ Main PID: 15095 (nginx)
+   CGroup: /system.slice/nginx.service
+           ├─15095 nginx: master process /usr/sbin/nginx
+           └─15174 nginx: worker process
 ```
 
-------------------------------------------------------------------------------------------------------------
-На данном этапе потребовалось обновить gcc
+Проверка доступа по порту 8080:
 
 ```console
-$ gcc --version
-gcc (GCC) 4.8.5 20150623 (Red Hat 4.8.5-44)
-
-$ sudo yum install -y centos-release-scl 
-$ sudo yum install -y devtoolset-8
-$ scl enable devtoolset-8 bash
-
-$ gcc --version
-gcc (GCC) 8.3.1 20190311 (Red Hat 8.3.1-3)
-```
-------------------------------------------------------------------------------------------------------------
-
-```console
-$ sudo make oldconfig
-$ sudo make
-$ sudo make modules_install install
-
-$ sudo vi /etc/default/grub
-
+[vagrant@nginx ~]$ curl http://192.168.11.150:8080
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>Welcome to CentOS</title>
+  <style rel="stylesheet" type="text/css">
 ...
-GRUB_DEFAULT=0
-...
-
-$ sudo grub2-mkconfig -o /boot/grub2/grub.cfg
-$ sudo reboot
-
-$ uname -r
-6.8.0
-$ uname -a
-Linux kern-new 6.8.0 #1 SMP PREEMPT_DYNAMIC Thu Mar 14 20:55:10 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux
 ```
