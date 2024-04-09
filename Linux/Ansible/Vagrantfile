@@ -1,0 +1,40 @@
+
+ENV['VAGRANT_SERVER_URL'] = 'http://vagrant.elab.pro'
+
+Vagrant.configure("2") do |config|
+
+	config.vm.box = "centos/7"
+	config.vm.box_check_update = false
+
+	config.vm.define "nginx" do |nginx|
+
+		nginx.vm.hostname = "nginx"	
+		nginx.vm.provider "virtualbox" do |v|
+			v.name = "nginx"
+			v.memory = "2048"
+			v.cpus = "1"
+			v.gui = false
+		end
+		
+		nginx.vm.network "private_network",
+			ip: "192.168.11.150",
+			adapter: 2,
+			netmask: "255.255.255.0",
+			virtualbox__intnet: "nginxnet"
+			
+		nginx.vm.network "forwarded_port",	# дополнительный проброс порта для доступа к ВМ из WSL
+			auto_correct: true,
+			guest: 22,
+			host: 2222,
+			host_ip: "192.168.1.6",	 # Ip-адрес Windows-хоста. 
+			id: "ssh-for-wsl"
+			
+		nginx.vm.provision "shell", inline: <<-SHELL
+			sudo mkdir -p ~root/.ssh
+			sudo cp ~vagrant/.ssh/auth* ~root/.ssh
+			sudo sed -i 's/\#PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+			sudo systemctl restart sshd
+		SHELL
+	end
+
+end
