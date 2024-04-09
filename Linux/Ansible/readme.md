@@ -9,13 +9,15 @@
 
 ## Выполнение
 
-1. Запущена ВМ с помощью Vagrantfile.
+### 1. Запущена ВМ с помощью Vagrantfile.
+
+Запускается в Windows из директории, где расположены файлы Vagrant.
+У меня это - D:\VBox_Projects\ansible.
+
+Вывод команды `vagrant ssh-config`:
 
 ```console
-vagrant ssh-config
-```
-
-...
+$ vagrant ssh-config
 Host nginx
   HostName 127.0.0.1
   User vagrant
@@ -28,17 +30,45 @@ Host nginx
   LogLevel FATAL
   PubkeyAcceptedKeyTypes +ssh-rsa
   HostKeyAlgorithms +ssh-rsa
-...
+```
 
-
-Дополнительно проброшен порт для доступа к ВМ из WSL:
+Проверка дополнительно проброшенного порта `ssh-for-wsl` для доступа к ВМ из wsl:
 
 ![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Ansible/%D0%9F%D1%80%D0%BE%D0%B1%D1%80%D0%BE%D1%81%20%D0%BF%D0%BE%D1%80%D1%82%D0%BE%D0%B2%20VirtualBox.png)
-*192.168.1.6 - ip-адрес хост-машины Windows*
+*192.168.1.6 - ip-адрес хост-машины Windows.*
+*Именно эти параметры будут использованы для подключения к ВМ из wsl.*
 
-2. Создан hosts.yaml 
+### 2. Созданы файлы hosts.yaml и ansible.cfg.
 
-```shell
+Файлы расположены в директории wsl для работы с Ansible.
+У меня это - /home/sof/for_ansible.
+В hosts.yaml прописан localhost для выполнения команд в wsl (для переноса private_key из директории Windows в директорию Ansible).
+Подключение к nginx прописано через хост Windows, так как напрямую из wsl ВМ на хостовой машине недоступны.
+Используется дополнительно проброшенный порт.
+
+Проверка доступа nginx и localhost из wsl:
+
+```console
+$ ansible wsl -m ping
+wsl | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python3"
+    },
+    "changed": false,
+    "ping": "pong"
+}
+$ ansible nginx -m ping
+nginx | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/bin/python"
+    },
+    "changed": false,
+    "ping": "pong"
+
+
+Проверка
+
+```console
 $ uname -r
 3.10.0-1127.el7.x86_64
 
