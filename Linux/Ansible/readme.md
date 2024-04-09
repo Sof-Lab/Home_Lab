@@ -1,4 +1,4 @@
-# Vagrant-Ansible стунд для установки и настройки nginx.
+# Vagrant-Ansible стeнд для установки и настройки nginx.
 
 ## Описание задачи
 
@@ -12,7 +12,10 @@
 1. Запущена ВМ с помощью Vagrantfile.
 
 ```console
-$ vagrant ssh-config
+vagrant ssh-config
+```
+
+...
 Host nginx
   HostName 127.0.0.1
   User vagrant
@@ -25,17 +28,17 @@ Host nginx
   LogLevel FATAL
   PubkeyAcceptedKeyTypes +ssh-rsa
   HostKeyAlgorithms +ssh-rsa
-```
+...
+
 
 Дополнительно проброшен порт для доступа к ВМ из WSL:
 
 ![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Ansible/%D0%9F%D1%80%D0%BE%D0%B1%D1%80%D0%BE%D1%81%20%D0%BF%D0%BE%D1%80%D1%82%D0%BE%D0%B2%20VirtualBox.png)
-
-
+*192.168.1.6 - ip-адрес хост-машины Windows*
 
 2. Создан hosts.yaml 
 
-```console
+```shell
 $ uname -r
 3.10.0-1127.el7.x86_64
 
