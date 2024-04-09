@@ -1,0 +1,12 @@
+web:
+    hosts:    
+        nginx:
+            ansible_host: 192.168.1.6
+            ansible_port: 2222
+            ansible_private_key_file: certs/nginx/private_key
+            
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
