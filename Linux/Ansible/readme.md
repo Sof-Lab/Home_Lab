@@ -6,13 +6,12 @@
 2. Развернуть nginx на ВМ с помощью Ansible.
 
 *Лабораторный стенд развёрнут на хосте с Windows + WSL2. На Windows установлены Vagrant и VirtualBox. Ansible установлен на WSL.*
+*Все файлы для vagrant располагаются в директории windows, у меня это - D:\VBox_Projects\ansible. Команды для работы с vagrant запускаются из той же директории.*
+*Все файлы для ansible располагаются в директории wsl, у меня это - /home/sof/for_ansible.. Команды для работы с ansible звпускаются из той же директории.*
 
 ## Выполнение
 
 ### 1. Запущена ВМ с помощью Vagrantfile.
-
-Запускается в Windows из директории, где расположены файлы Vagrant.
-У меня это - D:\VBox_Projects\ansible.
 
 Вывод команды `vagrant ssh-config`:
 
@@ -39,15 +38,13 @@ Host nginx
 *192.168.1.6 - ip-адрес хост-машины Windows.*
 *Именно эти параметры будут использованы для подключения к ВМ из wsl.*
 
-### 2. Созданы файлы hosts.yaml и ansible.cfg.
+### 2. Созданы файлы staging/hosts.yaml и ansible.cfg.
 
-Файлы расположены в директории wsl для работы с ansible.
-У меня это - /home/sof/for_ansible.
-В hosts.yaml прописан localhost для выполнения команд в wsl (для переноса private_key из директории windows в директорию ansible).
+В hosts.yaml прописан localhost для выполнения команд в wsl.
 Подключение к nginx прописано через хост Windows, так как напрямую из wsl ВМ на хостовой машине недоступны.
 Используется дополнительно проброшенный порт.
 
-Проверка доступа nginx и localhost из wsl:
+Проверка доступа к nginx и localhost из wsl:
 
 ```console
 $ ansible wsl -m ping
@@ -69,7 +66,7 @@ nginx | SUCCESS => {
 
 ### 3. Настройка nginx при помощи ansible.
 
-Playbook nginx.yml запускается ди wsl.
+Playbook nginx.yml запускается из wsl.
 
 ```console
 $ ansible-playbook nginx.yml
@@ -135,11 +132,14 @@ wsl                        : ok=4    changed=3    unreachable=0    failed=0    s
 Проверка доступа по порту 8080:
 
 ```console
-[vagrant@nginx ~]$ curl http://192.168.11.150:8080
+$ ansible nginx -m command -a "curl http://192.168.11.150:8080"
+nginx | CHANGED | rc=0 >>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
   <title>Welcome to CentOS</title>
   <style rel="stylesheet" type="text/css">
+
+        html {
 ...
 ```
