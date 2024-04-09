@@ -26,9 +26,12 @@ Host nginx
   PubkeyAcceptedKeyTypes +ssh-rsa
   HostKeyAlgorithms +ssh-rsa
 ```
-Дополнительно проброшенный порт для доступа к ВМ из WSL:
 
-![Image alt](https://github.com/{username}/{repository}/raw/{branch}/{path}/image.png)
+Дополнительно проброшен порт для доступа к ВМ из WSL:
+
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Ansible/%D0%9F%D1%80%D0%BE%D0%B1%D1%80%D0%BE%D1%81%20%D0%BF%D0%BE%D1%80%D1%82%D0%BE%D0%B2%20VirtualBox.png)
+
+
 
 2. Создан hosts.yaml 
 
