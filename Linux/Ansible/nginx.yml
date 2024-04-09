@@ -1,0 +1,75 @@
+---
+        
+- name: WSL localhost copy private_key for ansible
+  hosts: wsl
+  become: false
+
+  tasks:
+        
+    - name: Create directory for private_key
+      file:
+        path: /home/sof/for_ansible/certs/nginx
+        state: directory
+        
+    - name: Copy private_key file
+      copy:
+        src: /mnt/d/VBox_Projects/ansible/.vagrant/machines/nginx/virtualbox/private_key
+        dest: /home/sof/for_ansible/certs/nginx/private_key
+        
+    - name: Change permissions for private_key
+      file:
+        dest: /home/sof/for_ansible/certs/nginx/private_key
+        mode: 0400
+        
+- name: NGINX | Install and configure NGINX
+  hosts: nginx
+  become: true
+  vars:
+    nginx_listen_port: 8080
+
+  tasks:
+        
+    - name: Add epel-release
+      yum:
+        name: epel-release
+        state: latest
+      tags:
+        - add epel-repo
+        
+    - name: update
+      yum:
+        name: "*"
+        state: latest
+      tags:
+        - update yum
+        
+    - name: NGINX | Install NGINX
+      yum:
+        name: nginx
+        state: latest
+      notify:
+        - restart nginx
+      tags:
+        - nginx-package
+        
+    - name: NGINX | Create NGINX config file from template
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+      notify:
+        - reload nginx
+      tags:
+        - nginx-configuration
+           
+  handlers:
+  
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+        enabled: true
+        
+    - name: reload nginx
+      service:
+        name: nginx
+        state: reloaded
