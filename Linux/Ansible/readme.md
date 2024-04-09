@@ -40,13 +40,11 @@ Host nginx
 *192.168.1.6 - ip-адрес хост-машины Windows.*
 *Именно эти параметры будут использованы для подключения к ВМ из wsl.*
 
-### 2. Созданы файлы staging/hosts.yaml и ansible.cfg.
+### 2. Подготовка к работе с ansible.
 
-В hosts.yaml прописан localhost для выполнения команд в wsl.
-Подключение к nginx прописано через хост Windows, так как напрямую из wsl ВМ на хостовой машине недоступны.
-Используется дополнительно проброшенный порт `ssh-for-wsl`.
+В файле staging/hosts.yaml прописан localhost для выполнения команд в wsl.
 
-Проверка доступа к nginx и localhost из wsl:
+Проверка доступа к localhost от ansible:
 
 ```console
 $ ansible wsl -m ping
@@ -57,18 +55,18 @@ wsl | SUCCESS => {
     "changed": false,
     "ping": "pong"
 }
-$ ansible nginx -m ping
-nginx | SUCCESS => {
-    "ansible_facts": {
-        "discovered_interpreter_python": "/usr/bin/python"
-    },
-    "changed": false,
-    "ping": "pong"
 ```
+Это требуется, чтобы скопировать ключ private_key для подключения к ВМ из директории windows в директорию wsl.
+
+Подключение к nginx прописано через хост windows, так как напрямую из wsl ВМ на хостовой машине недоступны.
+Используется дополнительно проброшенный порт `ssh-for-wsl`.
+
+В ansible_private_key_file нужно указать директорию wsl, куда планируется скопировать private_key.
+Копирование ключа настраивается в nginx.yaml.
 
 ### 3. Настройка nginx при помощи ansible.
 
-Playbook nginx.yml запускается из wsl.
+Запуск Playbook nginx.yml.
 
 ```console
 $ ansible-playbook nginx.yml
