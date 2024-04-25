@@ -21,8 +21,6 @@
 
 ```console
 sudo su
-```
-```console
 yum install mdadm -y
 ```
 
@@ -31,7 +29,7 @@ yum install mdadm -y
 ```console
 lsblk
 ```
-...
+```
 NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
 sda      8:0    0   40G  0 disk
 └─sda1   8:1    0   40G  0 part /
@@ -40,7 +38,7 @@ sdc      8:32   0  250M  0 disk
 sdd      8:48   0  250M  0 disk
 sde      8:64   0  250M  0 disk
 sdf      8:80   0  250M  0 disk
-...
+```
 
 Зануление суперблоков:
 
@@ -59,7 +57,7 @@ mdadm --create --verbose /dev/md0 -l 6 -n 5 /dev/sd{b,c,d,e,f}
 ```console
 mdadm -D /dev/md0
 ```
-...
+```
 /dev/md0:
            Version : 1.2
      Creation Time : Tue Apr 23 18:12:17 2024
@@ -92,17 +90,13 @@ Consistency Policy : resync
        2       8       48        2      active sync   /dev/sdd
        3       8       64        3      active sync   /dev/sde
        4       8       80        4      active sync   /dev/sdf
-...
+```
 
 Создание конфиг файла mdadm.conf:
 
 ```console
 mkdir /etc/mdadm/
-```
-```console
 echo "DEVICE partitions" > /etc/mdadm/mdadm.conf
-```
-```console
 mdadm --detail --scan --verbose | awk '/ARRAY/ {print}' >> /etc/mdadm/mdadm.conf
 ```
 
@@ -111,7 +105,7 @@ mdadm --detail --scan --verbose | awk '/ARRAY/ {print}' >> /etc/mdadm/mdadm.conf
 ```console
 lsblk
 ```
-...
+```
 NAME   MAJ:MIN RM  SIZE RO TYPE  MOUNTPOINT
 sda      8:0    0   40G  0 disk
 └─sda1   8:1    0   40G  0 part  /
@@ -125,7 +119,7 @@ sde      8:64   0  250M  0 disk
 └─md0    9:0    0  744M  0 raid6
 sdf      8:80   0  250M  0 disk
 └─md0    9:0    0  744M  0 raid6
-...
+```
 
 ### 3. Сломать/Починить RAID.
 
@@ -140,7 +134,7 @@ mdadm /dev/md0 --fail /dev/sdf
 ```console
 mdadm -D /dev/md0
 ```
-...
+```
 /dev/md0:
            Version : 1.2
      Creation Time : Tue Apr 23 18:12:17 2024
@@ -175,7 +169,7 @@ Consistency Policy : resync
        -       0        0        4      removed
 
        4       8       80        -      faulty   /dev/sdf
-...
+```
 
 Удаление сломанного диска из массива:
 
@@ -194,7 +188,7 @@ mdadm /dev/md0 --add /dev/sdf
 ```console
 mdadm -D /dev/md0
 ```
-...
+```
 /dev/md0:
            Version : 1.2
      Creation Time : Tue Apr 23 18:12:17 2024
@@ -229,31 +223,23 @@ Consistency Policy : resync
        2       8       48        2      active sync   /dev/sdd
        3       8       64        3      active sync   /dev/sde
        5       8       80        4      spare rebuilding   /dev/sdf
-...
+```
 
 ### 4. Создать GPT раздел и 5 партиций, смонтировать их на диск.
 
 Создание GPT раздела:
 
-
-`parted -s /dev/md0 mklabel gpt`
-
+```console
+parted -s /dev/md0 mklabel gpt
+```
 
 Создание партиций:
 
 ```console
 parted -s /dev/md0 mkpart primery ext4 0% 20%
-```
-```console
 parted -s /dev/md0 mkpart primery ext4 20% 40%
-```
-```console
 parted -s /dev/md0 mkpart primery ext4 40% 60%
-```
-```console
 parted -s /dev/md0 mkpart primery ext4 60% 80%
-```
-```console
 parted -s /dev/md0 mkpart primery ext4 80% 100%
 ```
 
@@ -321,7 +307,7 @@ sdf         8:80   0   250M  0 disk
 ```console
 df -h
 ```
-...
+```
 Filesystem      Size  Used Avail Use% Mounted on
 devtmpfs        489M     0  489M   0% /dev
 tmpfs           496M     0  496M   0% /dev/shm
@@ -334,7 +320,7 @@ tmpfs           100M     0  100M   0% /run/user/1000
 /dev/md0p3      142M  1.6M  130M   2% /raid/part3
 /dev/md0p4      140M  1.6M  128M   2% /raid/part4
 /dev/md0p5      139M  1.6M  127M   2% /raid/part5
-...
+```
 
 ### 5. Прописать собранный RAID в конф, чтобы RAID собирался при загрузке.
 
