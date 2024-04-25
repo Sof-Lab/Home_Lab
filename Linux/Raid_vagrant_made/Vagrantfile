@@ -1,0 +1,84 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+ENV['VAGRANT_SERVER_URL'] = 'http://vagrant.elab.pro'
+
+disks = {
+
+	:sata1 => {
+		:dfile => './sata1.vdi',
+		:size => 250, # Megabytes
+		:port => 1
+	},
+	:sata2 => {
+		:dfile => './sata2.vdi',
+		:size => 250, # Megabytes
+		:port => 2
+	},
+	:sata3 => {
+		:dfile => './sata3.vdi',
+		:size => 250, # Megabytes
+		:port => 3
+	},
+	:sata4 => {
+		:dfile => './sata4.vdi',
+		:size => 250, # Megabytes
+		:port => 4
+	},
+
+}
+
+Vagrant.configure("2") do |config|
+
+	config.vm.box = "centos/7"
+	config.vm.box_check_update = false
+
+	config.vm.define "raid_3" do |raid_3|
+
+		raid_3.vm.hostname = "raid-3"	
+		raid_3.vm.provider "virtualbox" do |v|
+			v.name = "raid_3"
+			v.memory = "2048"
+			v.cpus = "1"
+			v.gui = false
+			v.customize ["modifyvm", :id, "--memory", "1024"]
+			needsController = false
+			disks.each do |dname, dconf|
+				unless File.exist?(dconf[:dfile])
+					v.customize ['createhd', '--filename', dconf[:dfile], '--variant', 'Fixed', '--size', dconf[:size]]
+					needsController =  true
+				end
+			end
+			if needsController == true
+				v.customize ["storagectl", :id, "--name", "SATA", "--add", "sata" ]
+				disks.each do |dname, dconf|
+					v.customize ['storageattach', :id,  '--storagectl', 'SATA', '--port', dconf[:port], '--device', 0, '--type', 'hdd', '--medium', dconf[:dfile]]
+				end
+			end
+			
+		end
+			
+		raid_3.vm.provision "shell", inline: <<-SHELL
+			sudo su
+			mkdir -p ~root/.ssh
+			cp ~vagrant/.ssh/auth* ~root/.ssh
+			sed -i 's/\#PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+			systemctl restart sshd
+			yum install mdadm -y
+			mdadm --zero-superblock --force /dev/sd{b,c,d,e}
+			mdadm --create --verbose /dev/md5 -l 5 -n 4 /dev/sd{b,c,d,e}
+			mkdir /etc/mdadm/
+			echo "DEVICE partitions" > /etc/mdadm/mdadm.conf
+			mdadm --detail --scan --verbose | awk '/ARRAY/ {print}' >> /etc/mdadm/mdadm.conf
+			parted -s /dev/md5 mklabel gpt
+			parted -s /dev/md5 mkpart primery ext4 0% 50%
+			parted -s /dev/md5 mkpart primery ext4 50% 100%
+			for i in $(seq 1 2); do mkfs.ext4 /dev/md5p$i; done
+			mkdir -p /raid5/part{1,2}
+			for i in $(seq 1 2); do mount /dev/md5p$i /raid5/part$i; done
+			for i in $(seq 1 2); do echo /dev/md5p$i /raid5/part$i ext4 defaults 0 0 >> /etc/fstab; done
+			reboot
+		SHELL
+	end
+	
+end
