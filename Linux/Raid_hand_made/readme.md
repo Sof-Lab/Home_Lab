@@ -253,8 +253,6 @@ for i in $(seq 1 5); do sudo mkfs.ext4 /dev/md0p$i; done
 
 ```console
 mkdir -p /raid/part{1,2,3,4,5}
-```
-```console
 for i in $(seq 1 5); do mount /dev/md0p$i /raid/part$i; done
 ```
 
