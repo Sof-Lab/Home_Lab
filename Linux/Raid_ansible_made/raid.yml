@@ -1,0 +1,112 @@
+---
+- name: WSL localhost copy private_key for ansible
+  hosts: wsl
+  become: false
+
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: /home/sof/otus_labs/raid_2/certs/raid_2
+        state: directory
+
+    - name: Copy private_key file   # Копирует файл с ключом из директории Windows в директорию wsl для ansible
+      copy:
+        src: /mnt/d/VBox_Projects/raid_2/.vagrant/machines/raid_2/virtualbox/private_key
+        dest: /home/sof/otus_labs/raid_2/certs/raid_2/private_key
+
+    - name: Change permissions for private_key
+      file:
+        dest: /home/sof/otus_labs/raid_2/certs/raid_2/private_key
+        mode: 0400
+
+
+- name: RAID | Create & Mount Raid
+  hosts: raid_2
+  become: true
+
+  tasks:
+
+    - name: install mdadm
+      yum:
+        name: mdadm
+        state: present
+      tags:
+        - install mdadm
+
+    - name: update
+      yum:
+        name: "*"
+        state: latest
+      tags:
+        - update yum
+
+    - name: zero-superblock
+      shell: "mdadm --zero-superblock --force /dev/sd{b,c,d,e}"
+      tags:
+        - zero-superblock
+
+    - name: create raid 10
+      shell: "mdadm --create --verbose /dev/md10 -l 10 -n 4 /dev/sd{b,c,d,e}"
+      tags:
+        - create raid
+
+    - name: create mdamd.conf - mkdir
+      file:
+        path: /etc/mdadm
+        state: directory
+
+    - name: create mdamd.conf - mkfile
+      shell: |
+        echo "DEVICE partitions" > /etc/mdadm/mdadm.conf
+        mdadm --detail --scan --verbose | awk '/ARRAY/ {print}' >> /etc/mdadm/mdadm.conf
+      tags:
+        - create mdadm.conf
+
+    - name: make partitions & filesystem
+      shell: |
+        parted -s /dev/md10 mklabel gpt
+        parted -s /dev/md10 mkpart primery ext4 0% 50%
+        parted -s /dev/md10 mkpart primery ext4 50% 100%
+        for i in $(seq 1 2); do sudo mkfs.ext4 /dev/md10p$i; done
+      tags:
+        - mkfs & parted
+
+    - name: mount raid
+      shell: |
+        mkdir -p /raid/part{1,2}
+        for i in $(seq 1 2); do mount /dev/md10p$i /raid/part$i; done
+      tags:
+        - mount
+
+    - name: add raid in fstab
+      shell: "for i in $(seq 1 2); do echo /dev/md10p$i /raid/part$i ext4 defaults 0 0 >> /etc/fstab; done"
+      tags:
+        - fstab
+
+    - name: show raid status
+      shell: "sudo mdadm -D /dev/md10"
+      register: raid_state
+      tags:
+        - show result
+
+    - name: show fylesystems
+      shell: "df -h"
+      register: fylesys
+      tags:
+        - show result
+
+    - name: show disks
+      shell: "lsblk"
+      register: disks
+      tags:
+        - show result
+
+    - debug:
+        msg="{{ raid_state.stdout_lines }}"
+
+    - debug:
+        msg="{{ fylesys.stdout_lines }}"
+
+    - debug:
+        msg="{{ disks.stdout_lines }}"

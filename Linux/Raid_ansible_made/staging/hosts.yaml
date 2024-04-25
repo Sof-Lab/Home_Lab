@@ -1,0 +1,11 @@
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+vm:
+    hosts:
+        raid_2:
+            ansible_host: 192.168.1.6
+            ansible_port: 2224
+            ansible_private_key_file: certs/raid_2/private_key
