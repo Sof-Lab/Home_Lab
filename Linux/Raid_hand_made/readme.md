@@ -235,9 +235,9 @@ Consistency Policy : resync
 
 Создание GPT раздела:
 
-```console
-parted -s /dev/md0 mklabel gpt
-```
+
+`parted -s /dev/md0 mklabel gpt`
+
 
 Создание партиций:
 
@@ -277,7 +277,7 @@ for i in $(seq 1 5); do mount /dev/md0p$i /raid/part$i; done
 ```console
 lsblk
 ```
-...
+```
 NAME      MAJ:MIN RM   SIZE RO TYPE  MOUNTPOINT
 sda         8:0    0    40G  0 disk
 └─sda1      8:1    0    40G  0 part  /
@@ -316,7 +316,7 @@ sdf         8:80   0   250M  0 disk
   ├─md0p3 259:2    0   150M  0 md    /raid/part3
   ├─md0p4 259:3    0 148.5M  0 md    /raid/part4
   └─md0p5 259:4    0   147M  0 md    /raid/part5
-...
+```
 
 ```console
 df -h
