@@ -40,6 +40,8 @@ grub2-mkconfig -o /boot/grub2/grub.cfg
 После перезагрузки во время отображения меню загрузчика нужно нажать "e" для изменения параметров.
 В конце строки "linux" добавлен "init=/bin/bash":
 
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Boot/Grub.png)
+
 Для перемонтирования рутовой файловой системы в режим чтение-запись:
 ```console
 mount -o remount,rw /
@@ -50,6 +52,8 @@ mount -o remount,rw /
 После перезагрузки во время отображения меню загрузчика нужно выюрать "Advanced options"
 и загрузить систему в режиме восстановления (recovery mode).
 При включенной поддержке сети (network) выбрать "root":
+
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Boot/Grub_Recovery_mode.png)
 
 ### 2. Установить систему с LVM, после чего переименовать VG.
 
@@ -91,3 +95,5 @@ lvs
 
 ### 3. Добавить модуль в initrd.
 Для успешной загрузки с LV с новым наименованием нужно изменить /boot/grub/grub.cfg:
+
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Boot/Grub_cfg.png)
