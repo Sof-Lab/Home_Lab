@@ -1,0 +1,21 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+	config.vm.box = "ubuntu/22"
+	config.vm.box_check_update = false
+
+	config.vm.define "boot2" do |boot2|
+
+		boot2.vm.hostname = "boot2"				# hostname
+		boot2.vm.provider "virtualbox" do |v|
+			v.name = "boot2" 					# имя в VB
+			v.memory = "2048"
+			v.cpus = "2"
+			v.gui = false
+		end
+	
+	end
+	
+end
