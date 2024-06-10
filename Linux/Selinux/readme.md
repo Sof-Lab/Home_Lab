@@ -238,9 +238,18 @@ Jun 10 18:08:07 selinux nginx[3312]: nginx: the configuration file /etc/nginx/ng
 Jun 10 18:08:07 selinux nginx[3312]: nginx: configuration file /etc/nginx/nginx.conf test is successful
 Jun 10 18:08:07 selinux systemd[1]: Started The nginx HTTP and reverse proxy server.
 ```
-Просмотр установленных модулей:
 ```console
-semodule -l
+curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:4881
+```
+```
+200
+```
+Просмотр установленных модулей "semodule -l", например:
+```console
+semodule -l | grep nginx
+```
+```
+nginx   1.0
 ```
 Удаление модуля:
 ```console
