@@ -58,6 +58,7 @@ audit2allow -a
 #!!!! WARNING: 'etc_t' is a base type.
 allow named_t etc_t:file create;
 ```
+Ошибка в контексте безопасности. Вместо типа named_t используется тип etc_t.
 Проверим данную проблему в каталоге /etc/named:
 ```console
 ls -laZ /etc/named
