@@ -56,31 +56,23 @@ Warning: Journal has been rotated since unit was started. Log output is incomple
 Проверка работы RPC на сервере NFS:
 ```console
 root@nfss:~# showmount -a 192.168.50.10
-```
-```
 All mount points on 192.168.50.10:
 192.168.50.11:/srv/share
 ```
 Проверка работы RPC на книенте NFS:
 ```console
 root@nfsc:~# showmount -a 192.168.50.10
-```
-```
 All mount points on 192.168.50.10:
 192.168.50.11:/srv/share
 ```
 Проверяем экспорты на сервере NFS:
 ```console
 root@nfss:~# exportfs
-```
-```
 /srv/share      192.168.50.11/32
 ```
 Проверяем статус монтирования на клиенте NFS:
 ```console
 root@nfsc:~# mount | grep /mnt
-```
-```
 systemd-1 on /mnt type autofs (rw,relatime,fd=27,pgrp=1,timeout=0,minproto=5,maxproto=5,direct)
 192.168.50.10:/srv/share/ on /mnt type nfs (rw,relatime,vers=3,rsize=32768,wsize=32768,namlen=255,hard,proto=udp,timeo=11,retrans=3,sec=sys,mountaddr=192.168.50.10,mountvers=3,mountport=44057,mountproto=udp,local_lock=none,addr=192.168.50.10)
 ```
