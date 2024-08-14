@@ -1,0 +1,11 @@
+[Unit]
+Description=My watchlog service
+Wants=watchlog.timer
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/watchlog
+ExecStart=/opt/watchlog.sh $WORD $LOG
+
+[Install]
+WantedBy=multi-user.target

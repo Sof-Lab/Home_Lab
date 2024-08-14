@@ -1,0 +1,24 @@
+Vagrant.configure(2) do |config|
+
+	config.vm.define "systemd" do |systemd|
+	config.vm.box = "ubuntu/22"
+		systemd.vm.hostname = "systemd"
+		systemd.vm.provider "virtualbox" do |v|
+			v.memory = 1024
+			v.cpus = 1
+			v.name = "systemd" 	# имя в VB
+		systemd.vm.network "forwarded_port",	# дополнительный проброс порта для доступа к ВМ из WSL
+			auto_correct: true,
+			guest: 22,
+			host: 2225,
+			host_ip: "192.168.1.8",	 # Ip-адрес Windows-хоста. 
+			id: "ssh-for-wsl"
+		systemd.vm.provision "shell", inline: <<-SHELL
+			sudo mkdir -p ~root/.ssh
+			sudo cp ~vagrant/.ssh/auth* ~root/.ssh
+			sudo sed -i 's/\#PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+			sudo systemctl restart sshd
+		SHELL
+		end
+	end
+end

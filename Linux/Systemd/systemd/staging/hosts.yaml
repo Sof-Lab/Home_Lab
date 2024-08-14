@@ -1,0 +1,11 @@
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+vm:
+    hosts:
+        systemd:
+            ansible_host: 192.168.1.8
+            ansible_port: 2225
+            ansible_private_key_file: certs/systemd/private_key

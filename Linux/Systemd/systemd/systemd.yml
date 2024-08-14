@@ -1,0 +1,171 @@
+---
+- name: WSL localhost copy private_key
+  hosts: localhost
+  become: false
+
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: /home/sof/otus_labs/systemd/certs/systemd
+        state: directory
+
+    - name: Copy private_key file
+      copy:
+        src: /mnt/d/VBox_Projects/systemd/.vagrant/machines/systemd/virtualbox/private_key
+        dest: /home/sof/otus_labs/systemd/certs/systemd/private_key
+
+    - name: Change permissions for private_key
+      file:
+        dest: /home/sof/otus_labs/systemd/certs/systemd/private_key
+        mode: 0400
+        
+        
+        
+- name: Configure systemd server
+  hosts: systemd
+  become: true
+  
+  tasks:
+  
+    - name: Default config for service
+      template:
+        src: templates/watchlog.j2
+        dest: /etc/default/watchlog
+          
+    - name: Create test log file
+      template:
+        src: templates/watchlog.log.j2
+        dest: /var/log/watchlog.log
+        
+    - name: Create script
+      template:
+        src: templates/watchlog.sh.j2
+        dest: /opt/watchlog.sh
+          
+    - name: Change permissions for watchlog.sh
+      file:
+        dest: /opt/watchlog.sh
+        mode: +x
+        
+    - name: Create unit for service
+      template:
+        src: templates/watchlog.service.j2
+        dest: /etc/systemd/system/watchlog.service
+        
+    - name: Create unit for timer
+      template:
+        src: templates/watchlog.timer.j2
+        dest: /etc/systemd/system/watchlog.timer
+        
+    - name: Start timer
+      service:
+        name: watchlog.timer
+        state: started
+        enabled: true
+        
+        
+        
+    - name: install spawn-fcgi
+      apt:
+        name: 
+          - spawn-fcgi
+          - php 
+          - php-cgi
+          - php-cli 
+          - apache2 
+          - libapache2-mod-fcgid
+        state: latest
+        update_cache: true
+        
+    - name: Create directory for spawn-fcgi
+      file:
+        path: /etc/spawn-fcgi
+        state: directory
+        
+    - name: Create config for spawn-fcgi
+      template:
+        src: templates/fcgi.conf.j2
+        dest: /etc/spawn-fcgi/fcgi.conf
+        
+    - name: Create unit for spawn-fcgi
+      template:
+        src: templates/spawn-fcgi.service.j2
+        dest: /etc/systemd/system/spawn-fcgi.service
+        
+    - name: Start spawn-fcgi
+      service:
+        name: spawn-fcgi
+        state: started
+        enabled: true
+        
+        
+        
+    - name: install nginx
+      apt:
+        name: nginx
+        state: latest
+        update_cache: true
+        
+    - name: Create config for nginx service
+      template:
+        src: templates/nginx.service.j2
+        dest: /etc/systemd/system/nginx@.service
+        
+    - name: Create config for nginx first
+      template:
+        src: templates/nginx-first.conf.j2
+        dest: /etc/nginx/nginx-first.conf
+        
+    - name: Create config for nginx second
+      template:
+        src: templates/nginx-second.conf.j2
+        dest: /etc/nginx/nginx-second.conf
+        
+    - name: Start nginx first
+      service:
+        name: nginx@first
+        state: started
+        enabled: true
+        
+    - name: Start nginx second
+      service:
+        name: nginx@second
+        state: started
+        enabled: true
+        
+        
+        
+- name: Check results
+  hosts: systemd
+  become: true
+  
+  tasks:
+        
+    - name: Check watchlog.service
+      shell: "tail -n 1000 /var/log/syslog  | grep word"
+      register: grep_word
+    
+    - debug:
+        msg="{{ grep_word.stdout_lines }}"
+        
+    - name: Check spawn-fcgi
+      shell: "systemctl status spawn-fcgi"
+      register: status_fcgi
+      
+    - debug:
+        msg="{{ status_fcgi.stdout_lines }}"
+        
+    - name: Check nginx count ports
+      shell: "ss -tnulp | grep nginx"
+      register: show_ports
+      
+    - debug:
+        msg="{{ show_ports.stdout_lines }}"
+        
+    - name: Check nginx count services
+      shell: "ps afx | grep nginx"
+      register: show_processes
+      
+    - debug:
+        msg="{{ show_processes.stdout_lines }}"
