@@ -206,5 +206,7 @@ wsl                        : ok=4    changed=1    unreachable=0    failed=0    s
 ## Проверка результатов
 
 В выводе playbook TASK [Check watchlog.service] найдены требуемые логи вида "I found word, Master!" - выполнено.
+
 В выводе playbook TASK [Check spawn-fcgi] статус запущенного spawn-fcgi - выполнено.
+
 В выводе playbook TASK [Check nginx count ports]  и TASK [Check nginx count services] видно, что одновременно запущено два nginx - выполнено.
