@@ -114,11 +114,11 @@ wsl                        : ok=4    changed=3    unreachable=0    failed=0    s
 
 На почту пришло письмо с содержанием:
 
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Bash/results/first-mail.png)
 
 Все требования учтены.
 Через час скрипт запустился снова и пришло следующее письмо:
 
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Bash/results/second-mail.png)
 
 Так как лог-файл не заполняется новыми данными, в письме указано, что обрабатывать нечего и временной промежуток.
