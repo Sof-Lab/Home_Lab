@@ -63,7 +63,7 @@ if test -f "/opt/scripts/access-tmp.log";
     echo "$dtstart Nothing to do" >> /var/log/myscript.log
     
     # Send email
-    emailRecipient="sof.kor2017@yandex.ru"
+    emailRecipient="{{ email_address }}"
     emailSubject="Access_Log_Processing"
     emailBody="Nothing to do - Processing period $dtlast_start - $dtstart"
     echo "$emailBody" | mailx -s "$emailSubject" "$emailRecipient";
