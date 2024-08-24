@@ -3,7 +3,7 @@ all:
     vm_name: bash           # имя ВМ в VB
     host_ip: 192.168.1.8    # Ip-адрес Windows-хоста
     vm_port: 2226           # Порт для подключения по ssh
-    dir_vagrant: /mnt/d/VBox_Projects/bash/     # Директория wsl, где расположены файлы windows-хоста
+    dir_vagrant: /mnt/d/VBox_Projects/bash/     # Директория wsl, где расположены файлы windows-хоста для работы с vagrant
     dir_wsl: /home/sof/otus_labs/bash/       # Директория wsl, где расположены файлы ansible
     email_address: example@mail.ru      # Адрес электронной почты для отправки писем с ВМ
 
