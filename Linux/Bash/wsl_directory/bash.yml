@@ -1,0 +1,87 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + '/certs/' + vm_name }}"
+        state: directory
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + '/certs/' + vm_name + '/private_key' }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + '/certs/' + vm_name + '/private_key' }}"
+        mode: 0400
+        
+        
+        
+- name: Configure vbox_vm
+  hosts: vbox_vm
+  become: true
+  
+  tasks:
+  
+    - name: Update GPG
+      shell: "rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux"
+        
+    - name: install packages
+      yum:
+        name: 
+          - postfix
+          - mailx
+        state: latest
+        
+    - name: update
+      yum:
+        name: "*"
+        state: latest
+        
+    - name: remove the ipv6 line from /etc/hosts
+      lineinfile:
+        dest: /etc/hosts
+        regexp: '^.*localhost6'
+        state: absent
+        
+    - name: Start postfix
+      service:
+        name: postfix
+        state: started
+        enabled: true
+        
+    - name: Set timezone
+      become: true
+      community.general.timezone:
+        name: Europe/Moscow
+        
+    - name: Create directory for script
+      file:
+        path: /opt/scripts
+        state: directory
+        
+    - name: Insert script
+      template:
+        src: templates/myscript.sh.j2
+        dest: /opt/scripts/myscript.sh
+        
+    - name: Change permissions for script
+      file:
+        dest: /opt/scripts/myscript.sh
+        mode: +x
+        
+    - name: Insert log file
+      template:
+        src: templates/access-4560-644067.log.j2
+        dest: /var/log/access-4560-644067.log
+        
+    - name: Creates a cron file under script
+      cron:
+        name: myscript
+        minute: "0"
+        job: "/opt/scripts/./myscript.sh"       

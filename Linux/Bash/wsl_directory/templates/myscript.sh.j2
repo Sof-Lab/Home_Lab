@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# Сhecking if the script is running
+if test -f "/opt/scripts/myfile.txt";
+  then exit 1;
+    else touch /opt/scripts/myfile.txt;
+fi
+
+# Сhecking if the script log file exist
+if test ! -f "/var/log/myscript.log";
+  then touch /var/log/myscript.log;
+fi
+
+# Set dates
+dtlast_start=$( awk 'END {print $1}' /var/log/myscript.log )
+dtstart=$( date +"%d/%b/%Y:%H:%M:%S" )
+
+# Logging for saving date last start
+echo "$dtstart Myscript running succsesfully" >> /var/log/myscript.log
+
+# Selection of logs for the raw period
+dtlog=($(grep -E -o "[0-9]*\/([a-z]|[A-Z])*\/[0-9]*:[0-9]*:[0-9]*:[0-9]*" /var/log/access-*.log))
+for i in ${!dtlog[@]}
+  do
+    if [ "${dtlog[$i]}" \> "$dtlast_start" ] ;
+      then stnum=$(grep -n "${dtlog[$i]}" /var/log/access-*.log | awk  -F":" 'NR==1 {print$1}')
+      awk -v "SN=$stnum" 'NR>=SN {print $0 >> "/opt/scripts/access-tmp.log"}' /var/log/access-*.log
+      break ;
+    fi
+done
+
+# Сchecking the availability of logs for processing
+if test -f "/opt/scripts/access-tmp.log";
+  then
+    echo -e "Log file processing results \n Processing period $dtlast_start - $dtstart \n \n" >> /opt/scripts/myfile.txt
+    
+    # IP List (with the largest number of requests) indicating the number of requests
+    ip=$(awk '{print $1}' /opt/scripts/access-tmp.log | sort | uniq -c | sort -n -r | head | awk '{print "count: " $1 " ip: " $2}')
+    echo -e "IP list (number of requests for ip) \n $ip \n \n" >> /opt/scripts/myfile.txt
+
+    # URL list with the largest number of requests) indicating the number of requests
+    url=$(grep -E -o "(http|https):\/\/[a-z]*(\.[a-z]*)?\.(com|ru)" /opt/scripts/access-tmp.log | sort | uniq -c | sort -n -r | head | awk '{print "count: " $1 " url: " $2}')
+    echo -e "URL list (number of requests for url) \n $url \n \n" >> /opt/scripts/myfile.txt
+
+    # Code HTTP list indicating the number of requests
+    code=$(grep -E -o "(HTTP\/1.1\")[[:space:]]+[0-9]{3}[[:space:]]+" /opt/scripts/access-tmp.log | awk '{print $2}' | sort | uniq -c | awk '{print "count: " $1 " code: " $2}')
+    echo -e "Code HTTP list (number of codes in log) \n $code \n \n" >> /opt/scripts/myfile.txt
+
+    # Web server/application errors
+    echo -e "Logs with errors code \n" >> /opt/scripts/myfile.txt
+    awk '/(HTTP\/1.1\")[[:space:]]+(4|5)[0-9]{2}[[:space:]]+/ {print$0 >> "/opt/scripts/myfile.txt"}' /opt/scripts/access-tmp.log
+
+    # Send email
+    emailRecipient="{{ email_address }}"
+    emailSubject="Access_Log_Processing"
+    emailBody="/opt/scripts/myfile.txt"
+    cat "$emailBody" | mailx -s "$emailSubject" "$emailRecipient"
+    
+    # Delete tmp log file
+    rm /opt/scripts/access-tmp.log;
+  
+  else 
+    echo "$dtstart Nothing to do" >> /var/log/myscript.log
+    
+    # Send email
+    emailRecipient="sof.kor2017@yandex.ru"
+    emailSubject="Access_Log_Processing"
+    emailBody="Nothing to do - Processing period $dtlast_start - $dtstart"
+    echo "$emailBody" | mailx -s "$emailSubject" "$emailRecipient";
+fi
+
+# Delete tmp file
+rm /opt/scripts/myfile.txt
