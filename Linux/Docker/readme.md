@@ -24,7 +24,9 @@ CONTAINER ID   IMAGE                           COMMAND                  CREATED 
 ```
 Для проверки работы приложения можно перейти через браузер по localhost:8080.
 Результат:
+
 ![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Docker/Test.png)
+
 Командой ` docker push sofmini/my-nginx-alpine:first` созданный образ отправляется на [Docker Hub](https://hub.docker.com/r/sofmini/my-nginx-alpine).
 
 ### 2. Разница между контейнером и образом.
