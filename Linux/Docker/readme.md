@@ -15,7 +15,7 @@
 
 Создан файл Dockerfile для образа nginx на основе alpine.
 В дополнение созданы конфиг файлы - nginx.conf и index.html, которые используются в Dockerfile.
-Следующей командой создан образ: `docker build -t sofmini/my-nginx-alpine:first:first .`.
+Следующей командой создан образ: `docker build -t sofmini/my-nginx-alpine:first .`.
 Запуск контейнера с использованием нового образа: `docker run -d -p 8080:80 --name test-my-image sofmini/my-nginx-alpine:first`.
 Вывод команды `docker ps`:
 ```
