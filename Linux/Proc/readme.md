@@ -108,7 +108,7 @@ user    0m0.003s
 sys     0m0.697s
 ```
 Утилита `iotop` показывает приоритет у процессов (в данном случае одинаковый):
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Proc/screenshots/io_first.png)
 Для второй:
 ```
 [root@proc ~]# ./io.sh
@@ -122,7 +122,7 @@ user    0m0.003s
 sys     0m0.699s
 ```
 `iotop`:
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Proc/screenshots/io_second.png)
 Для третьей:
 ```
 [root@proc ~]# ./io.sh
@@ -136,7 +136,7 @@ user    0m0.006s
 sys     0m0.698s
 ```
 `iotop`:
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Proc/screenshots/io_third.png)
 Для четвертой:
 ```
 [root@proc ~]# ./io.sh
@@ -150,7 +150,7 @@ user    0m0.004s
 sys     0m0.660s
 ```
 `iotop`:
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Proc/screenshots/io_fourth.png)
 
 ### 5. Реализовать 2 конкурирующих процесса по CPU. пробовать запустить с разными nice.
 
@@ -168,7 +168,7 @@ user    0m0.023s
 sys     0m0.241s
 ```
 Утилита `top` показывает приоритет у процессов (в данном случае одинаковый):
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Proc/screenshots/cpu_first.png)
 Для второй:
 ```
 [root@proc ~]# ./cpu.sh
@@ -182,4 +182,4 @@ user    0m0.034s
 sys     0m0.246s
 ```
 `top`:
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Proc/screenshots/cpu_second.png)
