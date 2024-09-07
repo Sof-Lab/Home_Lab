@@ -1,0 +1,57 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+
+Vagrant.configure("2") do |config|
+
+	config.vm.box = "alma/8"
+	config.vm.box_check_update = false
+
+	config.vm.define "mon" do |mon|
+
+		mon.vm.hostname = "mon"	
+		mon.vm.provider "virtualbox" do |v|
+			v.name = "mon"
+			v.memory = "2048"
+			v.cpus = "1"
+			v.gui = false
+		end
+		
+		mon.vm.network "forwarded_port", # проброс порта для доступа к ВМ из WSL
+			auto_correct: true,
+			guest: 22,
+			host: 2226, # Порт для подключения по ssh
+			host_ip: "192.168.1.8", # Ip-адрес Windows-хоста
+			id: "ssh-for-wsl"
+			
+		mon.vm.network "forwarded_port", # проброс порта для доступа к web мониторинга
+			auto_correct: true,
+			guest: 8080,
+			host: 8080,
+			host_ip: "127.0.0.1", # localhost
+			id: "web"		
+			
+		mon.vm.network "forwarded_port", # проброс порта для zabbix agent active от Windows хоста
+			auto_correct: true,
+			guest: 10051,
+			host: 10051,
+			host_ip: "127.0.0.1", # localhost
+			id: "agent-win"		
+
+		mon.vm.network "forwarded_port", # проброс порта для zabbix agent active от WSL
+			auto_correct: true,
+			guest: 10051,
+			host: 10051,
+			host_ip: "192.168.1.8", # localhost
+			id: "agent-wsl"				
+
+		mon.vm.provision "shell", inline: <<-SHELL
+			sudo -i
+			mkdir -p ~root/.ssh
+			cp ~vagrant/.ssh/auth* ~root/.ssh
+			sed -i 's/\#PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+			systemctl restart sshd
+		SHELL
+	end
+
+end
