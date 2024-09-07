@@ -66,10 +66,10 @@ ServerActive=127.0.0.1
 ### 3. Добавление хоста в мониторинг
 
 Через веб-интерфейс Zabbix в Configurations -> Actions -> Autoregistration actions прописаны операции:
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Mon/Autoregistration.png)
 
 ### 4. Результат
 
 Настроен дашборд с метриками, которые собраны с Windows хоста.
 
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Mon/Dashboard.png)
