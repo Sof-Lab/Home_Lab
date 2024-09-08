@@ -1,0 +1,98 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + '/certs/' + vm_name }}"
+        state: directory
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + '/certs/' + vm_name + '/private_key' }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + '/certs/' + vm_name + '/private_key' }}"
+        mode: 0400
+
+
+- name: Configure vbox_vm
+  hosts: vbox_vm
+  become: true
+
+  tasks:
+
+    - name: Add group of users
+      group:
+        name: admin
+        state: present
+
+    - name: Add user otus
+      user:
+        name: otus
+        password: "{{ pwd | password_hash('sha512') }}"
+      vars:
+        pwd: "Test2024!"
+
+    - name: Add user otusadm
+      user:
+        name: otusadm
+        append: true
+        groups: admin
+        password: "{{ pwd | password_hash('sha512') }}"
+      vars:
+        pwd: "admTest2024!"
+
+    - name: Add user root in group admin
+      user:
+        name: root
+        append: true
+        groups: admin
+
+    - name: Add user vagrant in group admin
+      user:
+        name: vagrant
+        append: true
+        groups: admin
+
+    - name: Check admin users
+      shell: "cat /etc/group | grep admin"
+      register: grep_admin_users
+
+    - debug:
+        msg="{{ grep_admin_users.stdout_lines }}"
+
+    - name: Add script login.sh
+      template:
+        src: templates/login.sh.j2
+        dest: /usr/local/bin/login.sh
+
+    - name: Change permissions for login.sh
+      file:
+        dest: /usr/local/bin/login.sh
+        mode: +x
+
+    - name: Add path to script in pam config
+      lineinfile:
+        path: /etc/pam.d/sshd
+        line: 'auth required pam_exec.so debug /usr/local/bin/login.sh'
+        create: yes
+
+
+
+
+
+
+        # search_string: '@include common-auth'
+        # insertafter: "auth required pam_exec.so debug /usr/local/bin/login.sh"
+        # state: absent
+        # line: '@include common-auth'
+
+
+        # apt-get install python3-passlib
+        # line: '@include common-auth'

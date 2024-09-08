@@ -1,0 +1,20 @@
+all:
+  vars:
+    vm_name: pam
+    host_ip: 192.168.1.8
+    vm_port: 2228
+    dir_vagrant: /mnt/d/VBox_Projects/pam/
+    dir_wsl: /home/sof/otus_labs/pam/
+
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+vbox_vm:
+    hosts:
+        lab_vm:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: "{{ vm_port }}"
+            ansible_private_key_file: "{{ 'certs/' + vm_name + '/private_key' }}"
