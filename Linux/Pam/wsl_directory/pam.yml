@@ -82,17 +82,3 @@
         path: /etc/pam.d/sshd
         line: 'auth required pam_exec.so debug /usr/local/bin/login.sh'
         create: yes
-
-
-
-
-
-
-        # search_string: '@include common-auth'
-        # insertafter: "auth required pam_exec.so debug /usr/local/bin/login.sh"
-        # state: absent
-        # line: '@include common-auth'
-
-
-        # apt-get install python3-passlib
-        # line: '@include common-auth'
