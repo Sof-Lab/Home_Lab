@@ -1,0 +1,29 @@
+# web:
+all:
+  vars:
+    host_ip: 192.168.1.8
+    dir_wsl: /home/sof/otus_labs/log/
+    dir_vagrant: /mnt/d/VBox_Projects/log/
+
+    vm_name_w: web
+    vm_port_w: 2223
+
+    vm_name_l: log
+    vm_port_l: 2224
+
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+vbox_vm:
+    hosts:
+        web:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: "{{ vm_port_w }}"
+            ansible_private_key_file: "{{ 'certs/' + vm_name_w + '/private_key' }}"
+        log:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: "{{ vm_port_l }}"
+            ansible_private_key_file: "{{ 'certs/' + vm_name_l + '/private_key' }}"

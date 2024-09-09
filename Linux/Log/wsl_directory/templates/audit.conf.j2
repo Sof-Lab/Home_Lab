@@ -1,0 +1,9 @@
+$ModLoad imfile
+$InputFileName /var/log/auth.log
+$InputFileTag tag_auth_log:
+$InputFileStateFile auth_log
+$InputFileSeverity info
+$InputFileFacility local6
+$InputRunFileMonitor
+
+*.*   @@192.168.56.15:514

@@ -1,0 +1,185 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name_w }}"
+        - "{{ dir_wsl + 'certs/' + vm_name_l }}"
+
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dst }}"
+      loop:
+        - {src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name_w + '/virtualbox/private_key' }}", dst: "{{ dir_wsl + 'certs/' + vm_name_w + '/private_key' }}"}
+        - {src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name_l + '/virtualbox/private_key' }}", dst: "{{ dir_wsl + 'certs/' + vm_name_l + '/private_key' }}"}
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ item }}"
+        mode: 0400
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name_w + '/private_key' }}"
+        - "{{ dir_wsl + 'certs/' + vm_name_l + '/private_key' }}"
+
+
+- name: Configure vbox_vm
+  hosts: vbox_vm
+  become: true
+
+  tasks:
+
+    - name: Set timezone
+      timezone:
+        name: Europe/Moscow
+
+    - name: Install chrony
+      apt:
+        name: chrony
+        state: latest
+
+    - name: Update all
+      apt:
+        update_cache: yes
+
+
+- name: Configure web
+  hosts: web
+  become: true
+
+  tasks:
+
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+
+    - name: Config files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dst }}"
+      loop:
+        - {src: "templates/nginx.conf.j2", dst: "/etc/nginx/nginx.conf"}
+        - {src: "templates/crit.conf.j2", dst: "/etc/rsyslog.d/crit.conf"}
+        - {src: "templates/audit.conf.j2", dst: "/etc/rsyslog.d/audit.conf"}
+
+    - name: Restart nginx
+      service:
+        state: restarted
+        name: nginx
+
+
+- name: Configure log
+  hosts: log
+  become: true
+
+  tasks:
+
+    - name: Config rsyslog
+      template:
+        src: templates/rsyslog.conf.j2
+        dest: /etc/rsyslog.conf
+
+    - name: Change permissions for log directory
+      file:
+        dest: "/var/log/"
+        mode: g+w
+
+    - name: Restart rsyslog
+      service:
+        state: restarted
+        enabled: yes
+        name: rsyslog
+
+
+- name: check result web
+  hosts: web
+  become: true
+
+  tasks:
+
+    - name: Check time synh
+      shell: "timedatectl"
+      register: timedatectl_w
+    - debug:
+        msg="{{ timedatectl_w.stdout_lines }}"
+
+    - name: Check status nginx
+      shell: "systemctl status nginx"
+      register: nginx
+    - debug:
+        msg="{{ nginx.stdout_lines }}"
+
+    - name: Check ports nginx
+      shell: "ss -tln | grep 80"
+      register: ports
+    - debug:
+        msg="{{ ports.stdout_lines }}"
+
+    - name: Check http code
+      ansible.builtin.uri:
+        url: http://192.168.56.10
+        status_code: 200
+
+    - name: Break nginx step 1
+      copy:
+        src: /var/www/html/index.nginx-debian.html
+        dest: /var/www/index.nginx-debian.html
+        follow: yes
+        remote_src: yes
+
+    - name: Break nginx step 2
+      file:
+        path: /var/www/html/index.nginx-debian.html
+        state: absent
+
+    - name: Check http code after break
+      ansible.builtin.uri:
+        url: http://192.168.56.10
+        status_code: 403
+
+    - name: Fix nginx
+      copy:
+        src: /var/www/index.nginx-debian.html
+        dest: /var/www/html/index.nginx-debian.html
+        follow: yes
+        remote_src: yes
+
+
+- name: check result log
+  hosts: log
+  become: true
+
+  tasks:
+
+    - name: Check time synh
+      shell: "timedatectl"
+      register: timedatectl_l
+    - debug:
+        msg="{{ timedatectl_l.stdout_lines }}"
+
+    - name: Check ports rsyslog
+      shell: "ss -tuln | grep 514"
+      register: ports_l
+    - debug:
+        msg="{{ ports_l.stdout_lines }}"
+
+    - name: Check http code
+      ansible.builtin.uri:
+        url: http://192.168.56.10
+        status_code: 200
+
+    - name: Check log directorys
+      shell: "ls /var/log/rsyslog/"
+      register: log
+    - debug:
+        msg="{{ log.stdout_lines }}"
