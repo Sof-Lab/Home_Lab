@@ -30,15 +30,6 @@
 ### 2. Настройка ВМ с помощью ansible.
 
 В файле staging/hosts.yaml нужно заполнить переменные для выполнения настройки ВМ:
-```
-all:
-  vars: 
-    vm_name: pam        		   # имя ВМ в VB
-    host_ip: 192.168.1.8   		 # Ip-адрес Windows-хоста
-    vm_port: 2228         		  # Порт для подключения по ssh
-    dir_vagrant: /mnt/d/VBox_Projects/pam/     # Директория wsl, где расположены файлы windows-хоста для работы с vagrant
-    dir_wsl: /home/sof/otus_labs/pam/       # Директория wsl, где расположены файлы ansible
-```
 
 ```
 all:
