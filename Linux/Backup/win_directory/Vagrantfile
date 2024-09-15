@@ -1,0 +1,35 @@
+Vagrant.configure("2") do |config|
+
+	config.vm.box = "ubuntu/22"
+	config.vm.box_check_update = false
+
+	config.vm.define "bcp_srv" do |bcp_srv|
+	  bcp_srv.vm.hostname = "bcp-srv"
+	  bcp_srv.vm.provider "virtualbox" do |v|
+	    v.name = "bcp_srv"
+	    v.memory = "2048"
+	    v.cpus = "1"
+
+	    file_to_disk = './disk.vdi'
+	    unless File.exist?(file_to_disk)
+	      v.customize ['createhd', '--filename', file_to_disk, '--size', 2 * 1024]
+	    end
+	    v.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 2, '--device', 0, '--type', 'hdd', '--medium', file_to_disk]
+
+	  end
+	  bcp_srv.vm.network "private_network", ip: "192.168.11.160", adapter: 2, netmask: "255.255.255.0", virtualbox__intnet: "backup_net"
+	  bcp_srv.vm.network "forwarded_port", auto_correct: true, guest: 22, host: 2227, host_ip: "192.168.1.8", id: "ssh-for-wsl"
+	end
+
+	config.vm.define "bcp_clnt" do |bcp_clnt|
+	  bcp_clnt.vm.hostname = "bcp-clnt"
+	  bcp_clnt.vm.provider "virtualbox" do |v|
+	    v.name = "bcp_clnt"
+	    v.memory = "2048"
+	    v.cpus = "1"
+	  end
+	  bcp_clnt.vm.network "private_network", ip: "192.168.11.150", adapter: 2, netmask: "255.255.255.0", virtualbox__intnet: "backup_net"
+	  bcp_clnt.vm.network "forwarded_port", auto_correct: true, guest: 22, host: 2228, host_ip: "192.168.1.8", id: "ssh-for-wsl"
+	end
+
+end

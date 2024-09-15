@@ -1,0 +1,155 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name_s }}"
+        - "{{ dir_wsl + 'certs/' + vm_name_c }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dst }}"
+      loop:
+        - {src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name_s + '/virtualbox/private_key' }}", dst: "{{ dir_wsl + 'certs/' + vm_name_s + '/private_key' }}"}
+        - {src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name_c + '/virtualbox/private_key' }}", dst: "{{ dir_wsl + 'certs/' + vm_name_c + '/private_key' }}"}
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ item }}"
+        mode: 0400
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name_s + '/private_key' }}"
+        - "{{ dir_wsl + 'certs/' + vm_name_c + '/private_key' }}"
+
+
+- name: Configure vbox_vm
+  hosts: vbox_vm
+  become: true
+  tasks:
+
+    - name: Set timezone
+      timezone:
+        name: Europe/Moscow
+
+    - name: Install packages
+      apt:
+        name:
+          - borgbackup
+          - expect
+          - lnav
+          - chrony
+        state: latest
+
+    - name: Update all
+      apt:
+        update_cache: yes
+
+
+- name: Configure bcp_srv
+  hosts: bcp_srv
+  become: true
+  tasks:
+
+    - name: Create a new ext4 primary partition
+      community.general.parted:
+        device: /dev/sdb
+        number: 1
+        state: present
+
+    - name: Create a ext4 filesystem on /dev/sdb
+      community.general.filesystem:
+        fstype: ext4
+        dev: /dev/sdb1
+        state: present
+
+    - name: Create directory for backups
+      file:
+        path: "{{ dir_borg }}"
+        state: directory
+
+    - name: Mount directory for backups
+      ansible.posix.mount:
+        path: "{{ dir_borg }}"
+        src: /dev/sdb1
+        state: mounted
+        fstype: ext4
+        boot: true
+
+    - name: Create a user 'borg' with a home directory
+      ansible.builtin.user:
+        name: "{{ user_borg }}"
+        home: "{{ dir_borg }}"
+
+    - name: Change permissions for all in /mnt/bcp
+      file:
+        state: directory
+        dest: "{{ dir_borg }}"
+        owner: "{{ user_borg }}"
+        group: "{{ user_borg }}"
+        recurse: yes
+
+    - name: Create file authorized_keys
+      shell: sudo -u "{{ user_borg }}" {{ item }}
+      loop:
+        - "{{ 'mkdir ' + dir_borg + '/.ssh/' }}"
+        - "{{ 'touch ' + dir_borg + '/.ssh/authorized_keys' }}"
+        - "{{ 'chmod 700 ' + dir_borg + '/.ssh/' }}"
+        - "{{ 'chmod 600 ' + dir_borg + '/.ssh/authorized_keys' }}"
+
+
+- name: Configure bcp_clnt
+  hosts: bcp_clnt
+  become: true
+  tasks:
+
+    - name: Generate SSH key pair
+      ansible.builtin.openssh_keypair:
+        path: ~/.ssh/id_rsa
+
+    - name: Read ssh key
+      shell: |
+        cat ~/.ssh/id_rsa.pub
+      register: ssh_key
+
+    - name: Copy ssh-key to bcp_srv
+      delegate_to: bcp_srv
+      ansible.posix.authorized_key:
+        user: "{{ user_borg }}"
+        key: "{{ ssh_key.stdout }}"
+        path: "{{ dir_borg + '/.ssh/authorized_keys' }}"
+        exclusive: true
+        manage_dir: false
+
+    - name: Copy borg-init script
+      template:
+        src: templates/borg-init.sh.j2
+        dest: ~/borg-init.sh
+
+    - name: Run borg-init script
+      shell: |
+        /usr/bin/expect /root/borg-init.sh
+        expect eof
+      ignore_errors: yes
+
+    - name: Copy bcp service file
+      template:
+        src: templates/borg-backup.service.j2
+        dest: /etc/systemd/system/borg-backup.service
+
+    - name: Copy bcp timer file
+      copy:
+        src: /home/sof/otus_labs/backup/templates/borg-backup.timer
+        dest: /etc/systemd/system/borg-backup.timer
+
+    - name: Start timer bcp
+      service:
+        state: started
+        name: borg-backup.timer
+        enabled: true
