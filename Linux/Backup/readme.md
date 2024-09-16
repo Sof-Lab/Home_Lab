@@ -16,7 +16,9 @@
 ### 1. Запуск ВМ с помощью vagrant.
 
 Для доступа к ВМ из wsl в Vagrantfile прописан дополнительный проброс порта `ssh-for-wsl`.
-В нём нужно указать ip-адрес хоста и желаемый порт ssh для подключения:
+В нём нужно указать ip-адрес хоста и желаемый порт ssh для подключения.
+
+Часть `file_to_disk` создает дополнительный диск объемом 2Гб.
 
 ### 2. Настройка ВМ с помощью ansible.
 
@@ -41,22 +43,103 @@ all:
 В файле staging/hosts.yaml прописан localhost для выполнения команд в wsl.
 Это требуется, чтобы скопировать ключ private_key для подключения к ВМ из директории windows в директорию wsl.
 
-После запуска playbook непозиторий уже будет инициализирован, бэкапы будут создаваться и удаляться по расписанию.
+В play "Configure bcp_srv" происходит монтирование диска, создание пользователя borg, создание директории файла для дальнейшего соединения по ssh с ключом.
+В play "Configure bcp_clnt" происходит генерация ключа для соединения по ssh, а также инициализация репозитория borg через скрипт borg-init.sh.
 
 ### 3. Проверка результатов.
 
 Можно посмотреть логи borg:
 
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Backup/results/Log.png)
 
 ### 4. Восстановление из бэкапа.
 
-Остановка 
+Для теста создам файл check_file.txt в директории etc:
+```comand
+root@bcp-clnt:/# cat /etc/check_file.txt
+If you're reading this, it means it works.
+```
+
+Убедимся, что в последнем бэкапе есть этот файл:
+```comand
+root@bcp-clnt:/# borg list borg@192.168.11.160:client1 | awk 'END {print $1}'
+Enter passphrase for key ssh://borg@192.168.11.160/./client1:
+etc-2024-09-17_00:59:46
+root@bcp-clnt:/# borg list borg@192.168.11.160:client1::etc-2024-09-17_00:59:46 | grep check_file
+Enter passphrase for key ssh://borg@192.168.11.160/./client1:
+-rw-r--r-- root   root         43 Mon, 2024-09-16 22:20:38 etc/check_file.txt
+```
+
+Остановка бэкапа:
+```comand
+root@bcp-clnt:/# systemctl stop borg-backup.timer
+root@bcp-clnt:/# systemctl status borg-backup.timer
+○ borg-backup.timer - Borg Backup
+     Loaded: loaded (/etc/systemd/system/borg-backup.timer; enabled; vendor preset: enabled)
+     Active: inactive (dead) since Tue 2024-09-17 01:03:05 MSK; 7s ago
+    Trigger: n/a
+   Triggers: ● borg-backup.service
+
+Sep 17 00:48:41 bcp-clnt systemd[1]: Started Borg Backup.
+Sep 17 01:03:05 bcp-clnt systemd[1]: borg-backup.timer: Deactivated successfully.
+Sep 17 01:03:05 bcp-clnt systemd[1]: Stopped Borg Backup.
+```
+
+Перенос директории etc:
+```comand
+root@bcp-clnt:/# mv /etc /tmp/etc
+root@bcp-clnt:/# ls /
+bin   dev   lib    lib64   lost+found  mnt  proc  run   snap  swap.img  tmp  var
+boot  home  lib32  libx32  media       opt  root  sbin  srv   sys       usr
+```
+
+Теперь подключиться к серверу с бэкапами не удается:
+```comand
+root@bcp-clnt:/# borg list borg@192.168.11.160:client1
+Remote: No user exists for uid 0
+Connection closed by remote host. Is borg working on the server?
+```
+
+Управление сервером потеряно: не работает сеть, не работает user login management, режим восстановления системы недоступен.
+Для восстановления удалим вм, создадим её заново, затем восстановим директорию etc из бэкапа.
+
+```comand
+PS D:\VBox_Projects\backup> vagrant destroy bcp_clnt
+    bcp_clnt: Are you sure you want to destroy the 'bcp_clnt' VM? [y/N] y
+==> bcp_clnt: Forcing shutdown of VM...
+==> bcp_clnt: Destroying VM and associated drives...
+PS D:\VBox_Projects\backup> vagrant up bcp_clnt
+```
+
+Зайдем на новую вм и убедимся, что в etc отсутствует файл check_file.txt:
+ 
+```comand
+root@bcp-clnt:~# ls /etc/check_file.txt
+ls: cannot access '/etc/check_file.txt': No such file or directory
+```
+
+Для восстановления воспользуюсь ansible playbook "bcp_recover_clnt.yml".
+В play "Configure bcp_clnt" происходит генерация нового ключа для соединения с сервером по ssh и восстановление etc при помощи скриптов borg-recover.sh и borg-recover-expect.sh.
+После запуска проверим, что в etc присутствует файл check_file.txt:
+
+```comand
+root@bcp-clnt:~# ls /etc/check_file.txt
+/etc/check_file.txt
+root@bcp-clnt:~# cat /etc/check_file.txt
+If you're reading this, it means it works.
+```
+
+Проверим, что после восстановления свежие бэкапы продолжают сохраняться через логи:
+
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Backup/results/Log_new.png)
+
+Успешно.
 
 ### 5. Полезные команды.
 
 ```comand
-borg list borg@192.168.11.160:client1
-borg delete borg@192.168.11.160:client1
-borg break-lock borg@192.168.11.160:client1
+borg list
+borg delete
+borg break-lock
+borg export-tar
 ```

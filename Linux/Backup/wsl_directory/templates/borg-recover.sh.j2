@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Show name last backup
+back_last=$( borg list {{ user_borg }}@192.168.11.160:{{ repo }} | awk 'END {print $1}' )
+
+# Extract last backup
+borg extract {{ user_borg }}@192.168.11.160:{{ repo }}::$back_last etc/

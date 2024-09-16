@@ -1,0 +1,106 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name_s }}"
+        - "{{ dir_wsl + 'certs/' + vm_name_c }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dst }}"
+      loop:
+        - {src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name_s + '/virtualbox/private_key' }}", dst: "{{ dir_wsl + 'certs/' + vm_name_s + '/private_key' }}"}
+        - {src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name_c + '/virtualbox/private_key' }}", dst: "{{ dir_wsl + 'certs/' + vm_name_c + '/private_key' }}"}
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ item }}"
+        mode: 0400
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name_s + '/private_key' }}"
+        - "{{ dir_wsl + 'certs/' + vm_name_c + '/private_key' }}"
+
+
+
+- name: Configure bcp_clnt
+  hosts: bcp_clnt
+  become: true
+  tasks:
+
+    - name: Set timezone
+      timezone:
+        name: Europe/Moscow
+
+    - name: Install packages
+      apt:
+        name:
+          - borgbackup
+          - expect
+          - lnav
+          - chrony
+        state: latest
+
+    - name: Update all
+      apt:
+        update_cache: yes
+
+    - name: Generate SSH key pair
+      ansible.builtin.openssh_keypair:
+        path: ~/.ssh/id_rsa
+
+    - name: Read ssh key
+      shell: |
+        cat ~/.ssh/id_rsa.pub
+      register: ssh_key
+
+    - name: Copy ssh-key to bcp_srv
+      delegate_to: bcp_srv
+      ansible.posix.authorized_key:
+        user: "{{ user_borg }}"
+        key: "{{ ssh_key.stdout }}"
+        path: "{{ dir_borg + '/.ssh/authorized_keys' }}"
+        exclusive: true
+        manage_dir: false
+
+    - name: Copy borg-recover scripts
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dst }}"
+      loop:
+        - {src: "templates/borg-recover.sh.j2", dst: "/borg-recover.sh"}
+        - {src: "templates/borg-recover-expect.sh.j2", dst: "/borg-recover-expect.sh"}
+
+    - name: Change permissions for borg-recover.sh
+      file:
+        dest: /borg-recover.sh
+        mode: +x
+
+    - name: Run borg-recover script
+      shell: /usr/bin/expect /borg-recover-expect.sh
+      args:
+        chdir: /
+      ignore_errors: yes
+
+    - name: Copy bcp service file
+      template:
+        src: templates/borg-backup.service.j2
+        dest: /etc/systemd/system/borg-backup.service
+
+    - name: Copy bcp timer file
+      copy:
+        src: /home/sof/otus_labs/backup/templates/borg-backup.timer
+        dest: /etc/systemd/system/borg-backup.timer
+
+    - name: Start timer bcp
+      service:
+        state: started
+        name: borg-backup.timer
+        enabled: true
