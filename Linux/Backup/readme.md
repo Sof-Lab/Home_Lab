@@ -100,7 +100,7 @@ Remote: No user exists for uid 0
 Connection closed by remote host. Is borg working on the server?
 ```
 
-Управление сервером потеряно: не работает сеть, не работает user login management, режим восстановления системы недоступен.
+Управление сервером потеряно: не работает user login management, режим восстановления системы недоступен.
 Для восстановления удалим вм, создадим её заново, затем восстановим директорию etc из бэкапа.
 
 ```comand
