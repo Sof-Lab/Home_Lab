@@ -48,7 +48,7 @@ all:
 По завершении нужно выключить вм, в Virtualbox изменить загрузку с сети на загрузку с диска и запустить вм.
 Результат:
 
-![Image alt]()
+![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Dhcp_pxe/results/pxeclient.png)
 
 ### 4. Полезные команды.
 
