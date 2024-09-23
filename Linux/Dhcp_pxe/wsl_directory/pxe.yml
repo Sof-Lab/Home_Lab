@@ -1,0 +1,121 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dst }}"
+      loop:
+        - {src: "{{ dir_vagrant + '/.vagrant/machines/' + vm_name + '/virtualbox/private_key' }}", dst: "{{ dir_wsl + 'certs/' + vm_name + '/private_key' }}"}
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ item }}"
+        mode: 0400
+      loop:
+        - "{{ dir_wsl + 'certs/' + vm_name + '/private_key' }}"
+
+
+- name: Configure vbox_vm
+  hosts: pxeserver
+  become: true
+  tasks:
+
+    - name: Stop ufw
+      service:
+        state: stopped
+        name: ufw
+        enabled: false
+
+    - name: Update all
+      apt:
+        update_cache: yes
+
+    - name: Install packages
+      apt:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - dnsmasq
+          - apache2
+          - whois
+
+    - name: Update all
+      apt:
+        update_cache: yes
+
+    - name: Create directorys for dhcp_pxe
+      file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - /srv/tftp
+        - /srv/images
+        - /srv/ks
+
+    - name: Create meta-data file
+      file:
+        path: /srv/ks/meta-data
+        state: touch
+
+    - name: Copy pxe.conf file
+      copy:
+        src: "{{ dir_wsl + 'templates/' + 'pxe.conf' }}"
+        dest: /etc/dnsmasq.d/pxe.conf
+
+    - name: Download files netboot
+      ansible.builtin.get_url:
+        url: "https://mirror.yandex.ru/ubuntu-releases/24.04/ubuntu-24.04.1-netboot-amd64.tar.gz"
+        dest: /root/ubuntu-24.04.1-netboot-amd64.tar.gz
+
+    - name: Extract files netboot
+      ansible.builtin.unarchive:
+        src: /root/ubuntu-24.04.1-netboot-amd64.tar.gz
+        dest: /srv/tftp
+        remote_src: true
+
+    - name: Download iso file
+      ansible.builtin.get_url:
+        url: "https://mirror.yandex.ru/ubuntu-releases/24.04/ubuntu-24.04.1-live-server-amd64.iso"
+        dest: /srv/images/ubuntu-24.04.1-live-server-amd64.iso
+
+    - name: Copy ks-server.conf file
+      copy:
+        src: "{{ dir_wsl + 'templates/' + 'ks-server.conf' }}"
+        dest: /etc/apache2/sites-available/ks-server.conf
+
+    - name: Activate conf ks-server
+      shell: sudo a2ensite ks-server.conf
+
+    - name: Copy ks-server.conf file
+      copy:
+        src: "{{ dir_wsl + 'templates/' + 'default' }}"
+        dest: /srv/tftp/amd64/pxelinux.cfg/default
+
+    - name: Copy user-data file
+      copy:
+        src: "{{ dir_wsl + 'templates/' + 'user-data' }}"
+        dest: /srv/ks/user-data
+
+    - name: Restart dnsmasq
+      service:
+        state: restarted
+        name: dnsmasq
+        enabled: true
+
+    - name: Restart apache2
+      service:
+        state: restarted
+        name: apache2
+        enabled: true

@@ -1,0 +1,21 @@
+# web:
+all:
+  vars:
+    host_ip: 192.168.1.8
+    dir_wsl: /home/sof/otus_labs/dhcp_pxe/
+    dir_vagrant: /mnt/d/VBox_Projects/dhcp_pxe/
+    vm_name: pxeserver
+    vm_port: 2230
+
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+vbox_vm:
+    hosts:
+        pxeserver:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: "{{ vm_port}}"
+            ansible_private_key_file: "{{ 'certs/' + vm_name + '/private_key' }}"
