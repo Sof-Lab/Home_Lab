@@ -121,44 +121,44 @@
 
 
 - name: Configure NET servers
-#   hosts: servers
-#   become: true
-#   tasks:
-#
-#     - name: Stop ufw
-#       service:
-#         state: stopped
-#         name: ufw
-#         enabled: false
-#
-#     - name: Install packages
-#       apt:
-#         name:
-#           - traceroute
-#         state: latest
-#
-#     - name: Disable default route
-#       template:
-#         src: templates/00-installer-config.yaml
-#         dest: /etc/netplan/00-installer-config.yaml
-#         owner: root
-#         group: root
-#         mode: 0644
-#
-#     - name: Configuring routes
-#       template:
-#         src: "templates/50-vagrant_{{ansible_hostname}}.yaml"
-#         dest: /etc/netplan/50-vagrant.yaml
-#         owner: root
-#         group: root
-#         mode: 0644
-#
-#     - name: Netplan apply
-#       shell: netplan apply
-#
-#     - name: Restart hosts
-#       reboot:
-#         reboot_timeout: 600
+  hosts: servers
+  become: true
+  tasks:
+
+    - name: Stop ufw
+      service:
+        state: stopped
+        name: ufw
+        enabled: false
+
+    - name: Install packages
+      apt:
+        name:
+          - traceroute
+        state: latest
+
+    - name: Disable default route
+      template:
+        src: templates/00-installer-config.yaml
+        dest: /etc/netplan/00-installer-config.yaml
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Configuring routes
+      template:
+        src: "templates/50-vagrant_{{ansible_hostname}}.yaml"
+        dest: /etc/netplan/50-vagrant.yaml
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Netplan apply
+      shell: netplan apply
+
+    - name: Restart hosts
+      reboot:
+        reboot_timeout: 600
 
 
 - name: Configure NGINX
