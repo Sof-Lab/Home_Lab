@@ -1,0 +1,340 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + 'certs/' + item }}"
+        state: directory
+      loop: "{{ query('inventory_hostnames', 'inet_routers, routers, servers') }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + item + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+      loop: "{{ query('inventory_hostnames', 'inet_routers, routers, servers') }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+        mode: 0400
+      loop: "{{ query('inventory_hostnames', 'inet_routers, routers, servers') }}"
+
+
+- name: Configure NET inet_routers
+  hosts: inet_routers
+  become: true
+  tasks:
+
+    - name: Stop ufw
+      service:
+        state: stopped
+        name: ufw
+        enabled: false
+
+    - name: Install packages
+      apt:
+        name:
+          - traceroute
+        state: latest
+
+    - name: Set up NAT on inetRouter
+      template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      with_items:
+       - { src: "templates/iptables_rules.ipv4", dest: "/etc/iptables_rules.ipv4", mode: "0644" }
+       - { src: "templates/iptables_restore", dest: "/etc/network/if-pre-up.d/iptables", mode: "0755" }
+
+    - name: Set up forward packages across routers
+      sysctl:
+        name: net.ipv4.conf.all.forwarding
+        value: '1'
+        state: present
+
+    - name: Configuring routes
+      template:
+        src: "templates/50-vagrant_{{ansible_hostname}}.yaml"
+        dest: /etc/netplan/50-vagrant.yaml
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Netplan apply
+      shell: netplan apply
+
+    - name: Restart hosts
+      reboot:
+        reboot_timeout: 600
+
+
+- name: Configure NET routers
+  hosts: routers
+  become: true
+  tasks:
+
+    - name: Stop ufw
+      service:
+        state: stopped
+        name: ufw
+        enabled: false
+
+    - name: Install packages
+      apt:
+        name:
+          - traceroute
+        state: latest
+
+    - name: Set up forward packages across routers
+      sysctl:
+        name: net.ipv4.conf.all.forwarding
+        value: '1'
+        state: present
+
+    - name: Disable default route
+      template:
+        src: templates/00-installer-config.yaml
+        dest: /etc/netplan/00-installer-config.yaml
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Configuring routes
+      template:
+        src: "templates/50-vagrant_{{ansible_hostname}}.yaml"
+        dest: /etc/netplan/50-vagrant.yaml
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Netplan apply
+      shell: netplan apply
+
+    - name: Restart hosts
+      reboot:
+        reboot_timeout: 600
+
+
+- name: Configure NET servers
+#   hosts: servers
+#   become: true
+#   tasks:
+#
+#     - name: Stop ufw
+#       service:
+#         state: stopped
+#         name: ufw
+#         enabled: false
+#
+#     - name: Install packages
+#       apt:
+#         name:
+#           - traceroute
+#         state: latest
+#
+#     - name: Disable default route
+#       template:
+#         src: templates/00-installer-config.yaml
+#         dest: /etc/netplan/00-installer-config.yaml
+#         owner: root
+#         group: root
+#         mode: 0644
+#
+#     - name: Configuring routes
+#       template:
+#         src: "templates/50-vagrant_{{ansible_hostname}}.yaml"
+#         dest: /etc/netplan/50-vagrant.yaml
+#         owner: root
+#         group: root
+#         mode: 0644
+#
+#     - name: Netplan apply
+#       shell: netplan apply
+#
+#     - name: Restart hosts
+#       reboot:
+#         reboot_timeout: 600
+
+
+- name: Configure NGINX
+  hosts: centralServer
+  become: true
+  tasks:
+
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+
+    - name: Create nginx config file from template
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+
+    - name: Restart nginx
+      service:
+        name: nginx
+        state: restarted
+        enabled: true
+
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+
+
+- name: Configure FORWARD inetRouter2
+  hosts: inetRouter2
+  become: true
+  tasks:
+
+    - name: Prerouting router port to nginx
+      ansible.builtin.iptables:
+        table: nat
+        chain: PREROUTING
+        destination: "{{ router_ext_ip }}"
+        protocol: tcp
+        destination_port: "{{ router_listen_port }}"
+        jump: DNAT
+        to_destination: "{{nginx_ip}}:{{nginx_listen_port}}"
+
+    - name: Forward from ext to int net
+      ansible.builtin.iptables:
+        chain: FORWARD
+        in_interface: "{{ router_ext_interface }}"
+        out_interface: "{{ router_int_interface }}"
+        destination: "{{ nginx_ip }}"
+        protocol: tcp
+        match: tcp
+        destination_port: "{{ nginx_listen_port }}"
+        jump: ACCEPT
+
+    - name: Nat source
+      ansible.builtin.iptables:
+        table: nat
+        chain: POSTROUTING
+        destination: "{{ nginx_ip }}"
+        protocol: tcp
+        jump: SNAT
+        to_source: "{{ router_int_ip }}"
+
+    - name: Nat destination
+      ansible.builtin.iptables:
+        table: nat
+        chain: OUTPUT
+        destination: "{{ router_ext_ip }}"
+        protocol: tcp
+        destination_port: "{{ router_listen_port }}"
+        jump: DNAT
+        to_destination: "{{ nginx_ip }}:{{ nginx_listen_port }}"
+
+    - name: Save current state of the firewall in system file
+      community.general.iptables_state:
+        ip_version: ipv4
+        state: saved
+        path: /etc/iptables_rules.ipv4
+
+    - name: Restart hosts
+      reboot:
+        reboot_timeout: 600
+
+
+- name: Configure KNOCKD inetRouter
+  hosts: inetRouter
+  become: true
+  tasks:
+
+    - name: Install packages
+      apt:
+        name:
+          - knockd
+        state: latest
+
+    - name: Delete default rule for ssh
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        match: state,tcp
+        ctstate: NEW
+        destination_port: 22
+        jump: ACCEPT
+        chain_management: true
+        state: absent
+
+    - name: Create rule for internal management
+      ansible.builtin.iptables:
+        chain: INPUT
+        source: 10.0.2.2
+        jump: ACCEPT
+
+    - name: Create rule for RELATED,ESTABLISHED ACCEPT
+      ansible.builtin.iptables:
+        chain: INPUT
+        ctstate:  RELATED,ESTABLISHED
+        jump: ACCEPT
+
+    - name: Create rule for SSH DROP
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 22
+        jump: DROP
+
+    - name: Save current state of the firewall in system file
+      community.general.iptables_state:
+        ip_version: ipv4
+        state: saved
+        path: /etc/iptables_rules.ipv4
+
+    - name: Restart hosts
+      reboot:
+        reboot_timeout: 600
+
+    - name: Put knockd config file from template
+      template:
+        src: templates/knockd.conf
+        dest: /etc/knockd.conf
+
+    - name: Start knockd
+      service:
+        name: knockd
+        state: restarted
+        enabled: true
+
+
+- name: Configure KNOCKD centralRouter
+  hosts: centralRouter
+  become: true
+  tasks:
+
+    - name: Install packages
+      apt:
+        name:
+          - knockd
+        state: latest
+
+    - name: Put knockd script to open ssh from template
+      template:
+        src: templates/knockd.sh
+        dest: /root/knockd.sh
+
+    - name: Put knockd script to close ssh from template
+      template:
+        src: templates/close_ssh.sh
+        dest: /root/close_ssh.sh
+
+    - name: Change permissions for script knockd
+      file:
+        dest: /root/knockd.sh
+        mode: +x
+
+    - name: Change permissions for script close_ssh
+      file:
+        dest: /root/close_ssh.sh
+        mode: +x

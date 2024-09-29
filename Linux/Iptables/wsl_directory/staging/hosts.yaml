@@ -1,0 +1,64 @@
+
+all:
+  vars:
+    host_ip: 192.168.1.8 # windows host ip
+    dir_wsl: /home/sof/otus_labs/iptables/ # directory wsl whith ansible files
+    dir_vagrant: /mnt/d/VBox_Projects/iptables/ # directory wsl whith vagrant files
+
+    nginx_listen_port: 8080
+    router_listen_port: 80
+
+    nginx_ip: 192.168.0.2 # centralServer ip
+    router_ext_ip: 192.168.56.6 # ip for connect to inetRouter2 from host (from dhcp virtualbox)
+    router_int_ip: 192.168.255.13 # internal net ip inetRouter2
+
+    router_ext_interface: eth2 # interface inetRouter2 whith ext_ip
+    router_int_interface: eth1 # interface inetRouter2 whith int_ip
+
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+
+inet_routers:
+    hosts:
+        inetRouter:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2229
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+        inetRouter2:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2236
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+
+routers:
+    hosts:
+        centralRouter:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2237
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+        office1Router:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2232
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+        office2Router:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2234
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+
+servers:
+    hosts:
+        centralServer:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2231
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+        office1Server:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2233
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+        office2Server:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2235
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
