@@ -1,9 +1,9 @@
 MACHINES = {
   :router1 => {
-        :box_name => "ubuntu/focal64",
-        :vm_name => "router1",
+		:box_name => "ubuntu/focal64",
+		:vm_name => "router1",
 		:wsl =>	[{auto_correct: true, guest: 22, host: 2210, host_ip: "192.168.1.8", id: "ssh-for-wsl"}],
-        :net => [
+		:net => [
                    {ip: '10.0.10.1', adapter: 2, netmask: "255.255.255.252", virtualbox__intnet: "r1-r2"},
                    {ip: '10.0.12.1', adapter: 3, netmask: "255.255.255.252", virtualbox__intnet: "r1-r3"},
                    {ip: '192.168.10.1', adapter: 4, netmask: "255.255.255.0", virtualbox__intnet: "net1"},
@@ -11,10 +11,10 @@ MACHINES = {
   },
 
   :router2 => {
-        :box_name => "ubuntu/focal64",
-        :vm_name => "router2",
+		:box_name => "ubuntu/focal64",
+		:vm_name => "router2",
 		:wsl =>	[{auto_correct: true, guest: 22, host: 2211, host_ip: "192.168.1.8", id: "ssh-for-wsl"}],
-        :net => [
+		:net => [
                    {ip: '10.0.10.2', adapter: 2, netmask: "255.255.255.252", virtualbox__intnet: "r1-r2"},
                    {ip: '10.0.11.2', adapter: 3, netmask: "255.255.255.252", virtualbox__intnet: "r2-r3"},
                    {ip: '192.168.20.1', adapter: 4, netmask: "255.255.255.0", virtualbox__intnet: "net2"},
@@ -22,10 +22,10 @@ MACHINES = {
   },
 
   :router3 => {
-        :box_name => "ubuntu/focal64",
-        :vm_name => "router3",
+		:box_name => "ubuntu/focal64",
+		:vm_name => "router3",
 		:wsl =>	[{auto_correct: true, guest: 22, host: 2212, host_ip: "192.168.1.8", id: "ssh-for-wsl"}],
-        :net => [
+		:net => [
                    {ip: '10.0.11.1', adapter: 2, netmask: "255.255.255.252", virtualbox__intnet: "r2-r3"},
                    {ip: '10.0.12.2', adapter: 3, netmask: "255.255.255.252", virtualbox__intnet: "r1-r3"},
                    {ip: '192.168.30.1', adapter: 4, netmask: "255.255.255.0", virtualbox__intnet: "net3"},
