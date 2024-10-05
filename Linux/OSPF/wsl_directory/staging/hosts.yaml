@@ -1,0 +1,57 @@
+
+all:
+  vars:
+    host_ip: 192.168.1.8 # windows host ip
+    dir_wsl: /home/sof/otus_labs/ospf/ # directory wsl whith ansible files
+    dir_vagrant: /mnt/d/VBox_Projects/ospf/ # directory wsl whith vagrant files
+
+    router_id_enable: false
+    symmetric_routing: false
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+
+routers:
+    hosts:
+        router1:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2210
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            router_id: 1.1.1.1
+            neighbor1: 10.0.10.2
+            neighbor2: 10.0.12.2
+            enp0s8:
+              description: r1-r2
+            enp0s9:
+              description: r1-r3
+            enp0s10:
+              description: net1
+        router2:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2211
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            router_id: 2.2.2.2
+            neighbor1: 10.0.10.1
+            neighbor2: 10.0.11.1
+            enp0s8:
+              description: r1-r2
+            enp0s9:
+              description: r2-r3
+            enp0s10:
+              description: net2
+        router3:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2212
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            router_id: 3.3.3.3
+            neighbor1: 10.0.12.1
+            neighbor2: 10.0.11.2
+            enp0s8:
+              description: r2-r3
+            enp0s9:
+              description: r1-r3
+            enp0s10:
+              description: net3
