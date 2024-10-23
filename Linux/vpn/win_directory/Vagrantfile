@@ -1,0 +1,44 @@
+# -*- mode: ruby -*-
+# vim: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+	config.vm.box = "ubuntu/jammy64"
+
+	config.vm.define "server" do |server|
+		server.vm.hostname = "server.loc"
+		server.vm.network "private_network", ip: "192.168.56.10"
+
+		server.vm.network "forwarded_port", # дополнительный проброс порта для доступа к ВМ из WSL
+			auto_correct: true,
+			guest: 22,
+			host: 2213, # Порт для подключения по ssh
+			host_ip: "192.168.1.8", # Ip-адрес Windows-хоста
+			id: "ssh-for-wsl"
+	end
+
+	config.vm.define "client" do |client|
+		client.vm.hostname = "client.loc"
+		client.vm.network "private_network", ip: "192.168.56.20"
+
+		client.vm.network "forwarded_port", # дополнительный проброс порта для доступа к ВМ из WSL
+			auto_correct: true,
+			guest: 22,
+			host: 2214, # Порт для подключения по ssh
+			host_ip: "192.168.1.8", # Ip-адрес Windows-хоста
+			id: "ssh-for-wsl"
+	end
+
+	config.vm.define "ras" do |ras|
+		ras.vm.hostname = "ras"
+		ras.vm.network "private_network", ip: "192.168.56.30"
+
+		ras.vm.network "forwarded_port", # дополнительный проброс порта для доступа к ВМ из WSL
+			auto_correct: true,
+			guest: 22,
+			host: 2215, # Порт для подключения по ssh
+			host_ip: "192.168.1.8", # Ip-адрес Windows-хоста
+			id: "ssh-for-wsl"
+	end
+
+end

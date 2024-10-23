@@ -1,0 +1,103 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + 'certs/' + item }}"
+        state: directory
+      loop: "{{ query('inventory_hostnames', 'vpn, ras') }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + item + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+      loop: "{{ query('inventory_hostnames', 'vpn, ras') }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+        mode: 0400
+      loop: "{{ query('inventory_hostnames', 'vpn, ras') }}"
+
+
+- name: Configure vpn
+  hosts: vpn
+  become: true
+  tasks:
+
+    - name: Install packages
+      apt:
+        name:
+          - openvpn
+          - iperf3
+        state: latest
+        update_cache: true
+
+    - name: Update all
+      apt:
+        update_cache: yes
+
+    - name: Gen openvpn key
+      shell: |
+        openvpn --genkey secret /etc/openvpn/static.key
+      when: (ansible_hostname == "server")
+
+    - name: Copy key
+      fetch:
+        src: /etc/openvpn/static.key
+        dest: tmp/static.key
+        flat: yes
+      when: (ansible_hostname == "server")
+
+    - name: Copy openvpn key to client
+      ansible.builtin.copy:
+        src: tmp/static.key
+        dest: /etc/openvpn/static.key
+      when: (ansible_hostname == "client")
+
+    - name: Create server.conf
+      template:
+        src: templates/server.conf.j2
+        dest: /etc/openvpn/server.conf
+      tags:
+        - mode_vpn
+
+    - name: Create service unit
+      template:
+        src: templates/openvpn@.service
+        dest: /etc/systemd/system/openvpn@.service
+
+    - name: Start openvpn service
+      service:
+        name: openvpn@server
+        state: restarted
+        enabled: true
+      tags:
+        - mode_vpn
+
+
+# - name: Configure vpn ras
+#   hosts: ras
+#   become: true
+#   tasks:
+#
+#     - name: Copy key
+#       fetch:
+#         src: /etc/openvpn/pki/ca.crt
+#         dest: tmp/ca.crt
+#         flat: yes
+#
+#     - name: Copy key
+#       fetch:
+#         src: /etc/openvpn/pki/issued/client.crt
+#         dest: tmp/client.crt
+#         flat: yes
+#
+#     - name: Copy key
+#       fetch:
+#         src: /etc/openvpn/pki/private/client.key
+#         dest: tmp/client.key
+#         flat: yes
