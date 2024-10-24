@@ -45,7 +45,7 @@ yum install -y ipa-server
 ```
 В файл `/etc/hosts` добавлена запись `192.168.57.10 ipa.otus.lan ipa`.
 В файле `/etc/selinux/config` установлено значение `SELINUX=disabled`.
-Далее командой `ipa-server-install` запускает скрипт установки ldap.
+Далее командой `ipa-server-install` запускается скрипт установки ldap.
 В диалоговом окне вводятся значения:
 ```
 Do you want to configure integrated DNS (BIND)? [no]: no
@@ -103,7 +103,7 @@ Password:
 ```
 Успешно.
 
-В веб-интерфейсе можно посмотреть список активный пользователей:
+В веб-интерфейсе можно посмотреть список активных пользователей:
 
 ![Image alt](https://github.com/Sof-Lab/Home_Lab/blob/main/Linux/Ldap/results/users.png)
 
