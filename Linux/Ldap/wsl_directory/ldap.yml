@@ -1,0 +1,84 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + 'certs/' + item }}"
+        state: directory
+      loop: "{{ query('inventory_hostnames', 'ldap, clients') }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + item + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+      loop: "{{ query('inventory_hostnames', 'ldap, clients') }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+        mode: 0400
+      loop: "{{ query('inventory_hostnames', 'ldap clients') }}"
+
+
+- name: Configure ldap clients
+  hosts: clients
+  become: true
+  tasks:
+
+    - name: Change a lines in repos.d
+      shell: |
+        sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+        sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
+    - name: Stop Firewall
+      service:
+        name: firewalld
+        state: stopped
+        enabled: false
+
+    - name: Disable SELinux
+      ansible.posix.selinux:
+        state: disabled
+
+    - name: Disable SELinux right now
+      shell: setenforce 0
+      ignore_errors: yes
+
+    - name: Set timezone
+      timezone:
+        name: Europe/Moscow
+
+    - name: Install packeges
+      yum:
+        name:
+          - java
+          - chrony
+          - freeipa-client
+        state: present
+        update_cache: true
+
+    - name: Update
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Start chrony
+      service:
+        name: chronyd
+        state: restarted
+        enabled: true
+
+    - name: Add ldap srv in hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: '^127.0.1.1 client1.otus.lan.*'
+        line: '192.168.57.10 ipa.otus.lan ipa'
+        state: present
+
+    - name: Add host to ipa-server
+      shell: |
+        echo -e "yes\nyes" | ipa-client-install --mkhomedir --domain=OTUS.LAN --server=ipa.otus.lan --no-ntp -p admin -w Mart3194
+      ignore_errors: yes

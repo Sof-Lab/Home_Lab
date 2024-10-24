@@ -1,0 +1,31 @@
+
+all:
+  vars:
+    host_ip: 192.168.1.8 # windows host ip
+    dir_wsl: /home/sof/otus_labs/ldap/ # directory wsl whith ansible files
+    dir_vagrant: /mnt/d/VBox_Projects/ldap/ # directory wsl whith vagrant files
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+
+ldap:
+    hosts:
+        ipa.otus.lan:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2216
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+
+clients:
+    hosts:
+        client1.otus.lan:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2217
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+
+        client2.otus.lan:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2218
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
