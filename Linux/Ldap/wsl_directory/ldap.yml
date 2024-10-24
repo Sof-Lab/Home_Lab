@@ -80,5 +80,5 @@
 
     - name: Add host to ipa-server
       shell: |
-        echo -e "yes\nyes" | ipa-client-install --mkhomedir --domain=OTUS.LAN --server=ipa.otus.lan --no-ntp -p admin -w Mart3194
+        echo -e "yes\nyes" | ipa-client-install --mkhomedir --domain=OTUS.LAN --server=ipa.otus.lan --no-ntp -p admin -w 'your_pass'
       ignore_errors: yes

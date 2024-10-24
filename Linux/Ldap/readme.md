@@ -75,6 +75,8 @@ Continue to configure the system with these values? [no]: yes
 В файле staging/hosts.yaml *(wsl_directory)* дополнительно прописан localhost для выполнения команд в wsl.
 Это требуется, чтобы скопировать ключ private_key для подключения к ВМ из директории windows в директорию wsl.
 
+В `ldap.yml` TASK `Add host to ipa-server` нужно ввести пароль от пользователя FreeIPA admin в части `-w 'your_pass'`.
+
 PLAY `WSL localhost copy private_key` копирует private_key на wsl.
 PLAY `Configure ldap clients` настраивает клиентов.
 
