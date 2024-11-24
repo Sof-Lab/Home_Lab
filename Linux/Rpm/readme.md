@@ -73,6 +73,7 @@ if ! ./configure \
 ```
 [root@rpm SPECS]# rpmbuild -ba nginx.spec -D 'debug_package %{nil}'
 ```
+Вывод:
 ```
 ...
 + cd /root/rpmbuild/BUILD
@@ -94,6 +95,7 @@ if ! ./configure \
 Запуск приложения:
 ```
 [root@rpm x86_64]# systemctl start nginx
+
 [root@rpm x86_64]# systemctl status nginx
 ● nginx.service - The nginx HTTP and reverse proxy server
      Loaded: loaded (/usr/lib/systemd/system/nginx.service; disabled; preset: disabled)
@@ -135,8 +137,7 @@ Pool started (with 5 workers)
 Pool finished
 ```
 Настройка конфига nginx для доступа к репо (добавление в блок `server`
-index index.html index.htm;
-autoindex on;
+`index index.html index.htm; autoindex on;`)
 ```
 [root@rpm x86_64]# nano /etc/nginx/nginx.conf
 ```
