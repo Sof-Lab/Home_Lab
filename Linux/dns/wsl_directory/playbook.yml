@@ -1,0 +1,81 @@
+---
+- hosts: wsl
+  become: false
+  tasks:
+  - name: Create directory for private_key
+    file:
+      path: "{{ dir_wsl + 'certs/' + item }}"
+      state: directory
+    loop: "{{ query('inventory_hostnames', 'dns') }}"
+  - name: Copy private_key file
+    copy:
+      src: "{{ dir_vagrant + '/.vagrant/machines/' + item + '/virtualbox/private_key' }}"
+      dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+    loop: "{{ query('inventory_hostnames', 'dns') }}"
+  - name: Change permissions for private_key
+    file:
+      dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+      mode: 0400
+    loop: "{{ query('inventory_hostnames', 'dns') }}"
+
+- hosts: dns
+  become: yes
+  tasks:
+  - name: Change a lines in repos.d
+    shell: |
+      sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+      sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+  - name: Install packeges
+    yum:
+      name:
+        - bind
+        - bind-utils
+      state: present
+      update_cache: true
+  - name: Update
+    yum: name="*" state=latest
+  - name: copy transferkey to all servers and the client
+    copy: src=named.zonetransfer.key dest=/etc/named.zonetransfer.key owner=root group=named mode=0644
+  - name: Set timezone
+    timezone: name=Europe/Moscow
+  - name: Start chrony
+    service: name=chronyd state=restarted enabled=true
+
+- hosts: ns01
+  become: yes
+  tasks:
+  - name: copy named.conf
+    copy: src=master-named.conf dest=/etc/named.conf owner=root group=named mode=0640
+  - name: copy zones
+    copy: src={{ item }} dest=/etc/named/ owner=root group=named mode=0660
+    with_fileglob:
+      - named.d*
+      - named.newdns.lab
+  - name: copy resolv.conf to the servers
+    template: src=servers-resolv.conf.j2 dest=/etc/resolv.conf owner=root group=root mode=0644
+  - name: set /etc/named permissions
+    file: path=/etc/named owner=root group=named mode=0670
+  - name: ensure named is running and enabled
+    service: name=named state=restarted enabled=yes
+
+- hosts: ns02
+  become: yes
+  tasks:
+  - name: copy named.conf
+    copy: src=slave-named.conf dest=/etc/named.conf owner=root group=named mode=0640
+  - name: copy resolv.conf to the servers
+    template: src=servers-resolv.conf.j2 dest=/etc/resolv.conf owner=root group=root mode=0644
+  - name: set /etc/named permissions
+    file: path=/etc/named owner=root group=named mode=0670
+  - name: ensure named is running and enabled
+    service: name=named state=restarted enabled=yes
+
+- hosts: client,client2
+  become: yes
+  tasks:
+  - name: copy resolv.conf to the client
+    copy: src=client-resolv.conf dest=/etc/resolv.conf owner=root group=root mode=0644
+  - name: copy rndc conf file
+    copy: src=rndc.conf dest=/home/vagrant/rndc.conf owner=vagrant group=vagrant mode=0644
+  - name: copy motd to the client
+    copy: src=client-motd dest=/etc/motd owner=root group=root mode=0644
