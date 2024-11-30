@@ -1,0 +1,125 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + 'certs/' + item }}"
+        state: directory
+      loop: "{{ query('inventory_hostnames', 'routers, net1, net2') }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + item + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+      loop: "{{ query('inventory_hostnames', 'routers, net1, net2') }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+        mode: 0400
+      loop: "{{ query('inventory_hostnames', 'routers, net1, net2') }}"
+
+
+- name: Base Configure Hosts RedHat
+  hosts: routers, net1
+  become: true
+  tasks:
+
+    - name: Change a lines in repos.d
+      shell: |
+        sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+        sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
+    - name: Install packages
+      yum:
+        name:
+          - vim
+          - traceroute
+          - tcpdump
+          - net-tools
+        state: latest
+        update_cache: true
+
+
+- name: Base Configure Hosts Debian
+  hosts: net2
+  become: true
+  tasks:
+
+    - name: Install packages
+      apt:
+        name:
+          - vim
+          - traceroute
+          - tcpdump
+          - net-tools
+        state: latest
+        update_cache: true
+
+
+- name: Configure VLAN 1
+  hosts: net1
+  become: true
+  tasks:
+
+    - name: Set up vlan1
+      template:
+        src: templates/ifcfg-vlan1.j2
+        dest: /etc/sysconfig/network-scripts/ifcfg-vlan1
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Restart network for vlan1
+      service:
+        name: NetworkManager
+        state: restarted
+
+
+- name: Configure VLAN 2
+  hosts: net2
+  become: true
+  tasks:
+
+    - name: Set up vlan2
+      template:
+        src: templates/50-cloud-init.yaml.j2
+        dest: /etc/netplan/50-cloud-init.yaml
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Apply set up vlan2
+      shell: netplan apply
+
+
+- name: Configure LACP
+  hosts: inetRouter, centralRouter
+  become: true
+  tasks:
+
+    - name: Sset up ifcfg-bond0
+      template:
+        src: templates/ifcfg-bond0.j2
+        dest: /etc/sysconfig/network-scripts/ifcfg-bond0
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Set up eth1,eth2
+      copy:
+        src: "{{ item }}"
+        dest: /etc/sysconfig/network-scripts/
+        owner: root
+        group: root
+        mode: 0644
+      with_items:
+        - templates/ifcfg-eth1
+        - templates/ifcfg-eth2
+
+    - name: Restart hosts for bond0
+      reboot:
+        reboot_timeout: 3600

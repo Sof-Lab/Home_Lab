@@ -1,0 +1,59 @@
+
+all:
+  vars:
+    host_ip: 192.168.1.8 # windows host ip
+    dir_wsl: /home/sof/otus_labs/vlan/ # directory wsl whith ansible files
+    dir_vagrant: /mnt/d/VBox_Projects/vlan/ # directory wsl whith vagrant files
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+
+routers:
+    hosts:
+        inetRouter:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2240
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            bond_ip: 192.168.255.1
+        centralRouter:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2241
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            bond_ip: 192.168.255.2
+        office1Router:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2242
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+
+net1:
+    hosts:
+        testClient1:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2243
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            vlan_id: 1
+            vlan_ip: 10.10.10.254
+        testServer1:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2244
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            vlan_id: 1
+            vlan_ip: 10.10.10.1
+
+net2:
+    hosts:
+        testClient2:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2245
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            vlan_id: 2
+            vlan_ip: 10.10.10.254
+        testServer2:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2246
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            vlan_id: 2
+            vlan_ip: 10.10.10.1
