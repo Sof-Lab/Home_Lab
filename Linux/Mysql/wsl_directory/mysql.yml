@@ -1,0 +1,288 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + 'certs/' + item }}"
+        state: directory
+      loop: "{{ query('inventory_hostnames', 'vms') }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + item + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+      loop: "{{ query('inventory_hostnames', 'vms') }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+        mode: 0400
+      loop: "{{ query('inventory_hostnames', 'vms') }}"
+
+
+- name: Configure Replication Mysql
+  hosts: vms
+  become: true
+  tasks:
+
+    - name: Stop Firewall
+      service:
+        name: firewalld
+        state: stopped
+        enabled: false
+
+    - name: Disable SELinux
+      ansible.posix.selinux:
+        state: disabled
+
+    - name: Disable SELinux right now
+      shell: setenforce 0
+      ignore_errors: yes
+
+    - name: Update GPG
+      shell: "rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux"
+
+    - name: Disable mysql module
+      command: yum -qy module disable mysql
+
+    - name: Install repo Percona
+      yum:
+        name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+        state: present
+        disable_gpg_check: true
+
+    - name: Enable repo Percona
+      shell: percona-release setup ps57
+
+    - name: Install packeges
+      yum:
+        name:
+          - nano
+          - lnav
+          - Percona-Server-server-57
+        state: present
+        update_cache: true
+
+    - name: Install pymysql python package
+      ansible.builtin.pip:
+        name: pymysql
+
+    - name: Update
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Set timezone
+      timezone:
+        name: Europe/Moscow
+
+    - name: Copy conf files
+      template:
+        src: "templates/{{ item.src }}"
+        dest: "/etc/my.cnf.d/{{ item.dst }}"
+      with_items:
+        - { src: '01-base.cnf.j2', dst: '01-base.cnf' }
+        - { src: '02-max-connections.cnf', dst: '02-max-connections.cnf' }
+        - { src: '03-performance.cnf', dst: '03-performance.cnf' }
+        - { src: '04-slow-query.cnf', dst: '04-slow-query.cnf' }
+        - { src: '05-binlog.cnf.j2', dst: '05-binlog.cnf' }
+
+    - name: Start mysql
+      service:
+        name: mysql
+        state: started
+        enabled: true
+
+    - name: Fetch mysql root pass on master
+      shell: cat /var/log/mysqld.log | grep 'root@localhost:' | awk '{print $11}'
+      register: master_temp_pass
+      when: (ansible_hostname == "master")
+
+    - name: Change MySQL root password on master
+      command: >
+        mysqladmin -u root -p{{ master_temp_pass.stdout }} password '{{ mysql_pass }}'
+      when: (ansible_hostname == "master")
+
+    - name: Fetch mysql root pass on slave
+      shell: cat /var/log/mysqld.log | grep 'root@localhost:' | awk '{print $11}'
+      register: slave_temp_pass
+      when: (ansible_hostname == "slave")
+
+    - name: Change MySQL root password on slave
+      command: >
+        mysqladmin -u root -p{{ slave_temp_pass.stdout }} password '{{ mysql_pass }}'
+      when: (ansible_hostname == "slave")
+
+    - name: Create DB bet
+      mysql_db:
+        login_user: root
+        login_password: "{{ mysql_pass }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        name: bet
+        state: present
+      when: (ansible_hostname == "master")
+
+    - name: Copy dump file
+      copy:
+        src: templates/bet.dmp
+        dest: /tmp/bet.dmp
+      when: (ansible_hostname == "master")
+
+    - name: Restore DB from dump
+      mysql_db:
+        login_user: root
+        login_password: "{{ mysql_pass }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        name: bet
+        state: import
+        target: /tmp/bet.dmp
+      when: (ansible_hostname == "master")
+
+    - name: Create replic-user
+      mysql_user:
+        login_user: root
+        login_password: "{{ mysql_pass }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        column_case_sensitive: true
+        name: "{{ repl_user }}"
+        password: "{{ repl_pass }}"
+        state: present
+        priv: '*.*:REPLICATION SLAVE'
+        host: '%'
+      when: (ansible_hostname == "master")
+
+    - name: Restart mysql
+      service:
+        name: mysql
+        state: restarted
+        enabled: true
+
+    - name: Create master-dump
+      mysql_db:
+        login_user: root
+        login_password: "{{ mysql_pass }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        state: dump
+        name: all
+        target: /tmp/master.sql
+        master_data: 1
+        ignore_tables: ['bet.events_on_demand','bet.v_same_event']
+      when: (ansible_hostname == "master")
+
+    - name: Copy dump to host
+      fetch:
+        src: /tmp/master.sql
+        dest: tmp/master.sql
+        flat: yes
+      when: (ansible_hostname == "master")
+
+    - name: Copy dump to slave
+      copy:
+        src: tmp/master.sql
+        dest: /tmp/master.sql
+      when: (ansible_hostname == "slave")
+
+    - name: Restore DB from master-dump
+      mysql_db:
+        login_user: root
+        login_password: "{{ mysql_pass }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        name: all
+        state: import
+        target: /tmp/master.sql
+        force: true
+      when: (ansible_hostname == "slave")
+
+    - name: Connect to master
+      mysql_replication:
+        login_user: root
+        login_password: "{{ mysql_pass }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        mode: changeprimary
+        primary_host: 192.168.11.150
+        primary_port: 3306
+        primary_user: "{{ repl_user }}"
+        primary_password: "{{ repl_pass }}"
+        primary_auto_position: 1
+      when: (ansible_hostname == "slave")
+
+    - name: Start replica
+      mysql_replication:
+        login_user: root
+        login_password: "{{ mysql_pass }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        mode: startreplica
+      when: (ansible_hostname == "slave")
+
+#----------------------------------------------------------------------------------------------
+# debug
+#----------------------------------------------------------------------------------------------
+
+    # - name: Stop replica
+    #   mysql_replication:
+    #     login_user: root
+    #     login_password: "{{ mysql_pass }}"
+    #     login_unix_socket: /var/lib/mysql/mysql.sock
+    #     mode: stopreplica
+    #   when: (ansible_hostname == "slave")
+    #
+    # - name: Reset master
+    #   mysql_replication:
+    #     login_user: root
+    #     login_password: "{{ mysql_pass }}"
+    #     login_unix_socket: /var/lib/mysql/mysql.sock
+    #     mode: resetprimary
+    #   when: (ansible_hostname == "master")
+    #
+    # - name: Start replica
+    #   mysql_replication:
+    #     login_user: root
+    #     login_password: "{{ mysql_pass }}"
+    #     login_unix_socket: /var/lib/mysql/mysql.sock
+    #     mode: startreplica
+    #   when: (ansible_hostname == "slave")
+    #
+    # - name: Get primery
+    #   delegate_to: master
+    #   mysql_replication:
+    #     login_user: root
+    #     login_password: "{{ mysql_pass }}"
+    #     login_unix_socket: /var/lib/mysql/mysql.sock
+    #     mode: getprimary
+    #   register: master_status
+    #   when: (ansible_hostname == "slave")
+    #
+    # - name: Print master status
+    #   delegate_to: slave
+    #   debug:
+    #     msg: "{{ master_status.File, master_status.Position }}"
+    #   when: (ansible_hostname == "master")
+    #
+    # - name: Get slave
+    #   mysql_replication:
+    #     login_user: root
+    #     login_password: "{{ mysql_pass }}"
+    #     login_unix_socket: /var/lib/mysql/mysql.sock
+    #     mode: getreplica
+    #   register: slave_status
+    #   when: (ansible_hostname == "slave")
+    #
+    # - name: Print slave status
+    #   debug:
+    #     msg: "{{ slave_status.Slave_IO_Running, slave_status.Slave_SQL_Running, slave_status.Slave_IO_State }}"
+    #   when: (ansible_hostname == "slave")
+    #
+    # - name: Refresh log file & position
+    #   # delegate_to: slave
+    #   mysql_replication:
+    #     login_user: root
+    #     login_password: "{{ mysql_pass }}"
+    #     login_unix_socket: /var/lib/mysql/mysql.sock
+    #     mode: changeprimary
+    #     primary_auto_position: 0
+    #     primary_log_file: "{{ master_status.File }}"
+    #     primary_log_pos: "{{ master_status.Position }}"
+    #   when: (ansible_hostname == "slave")

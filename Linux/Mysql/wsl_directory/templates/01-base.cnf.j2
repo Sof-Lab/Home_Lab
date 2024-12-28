@@ -1,0 +1,12 @@
+[mysqld]
+pid-file=/var/run/mysqld/mysqld.pid
+log-error=/var/log/mysqld.log
+datadir=/var/lib/mysql
+socket=/var/lib/mysql/mysql.sock
+symbolic-links=0
+
+server-id = {{ server_id }}
+innodb_file_per_table = 1
+skip-name-resolve
+#slave-skip-errors=1007,1008,1050,1051,1054,1060,1061,1068,1094,1146,1396,1133
+slave-skip-errors=1007,1008,1050,1068,1094,1146,1396,1133

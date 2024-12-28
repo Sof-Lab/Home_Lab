@@ -1,0 +1,31 @@
+
+all:
+  vars:
+    host_ip: 192.168.1.8 # windows host ip
+    dir_wsl: /home/sof/otus_labs/mysql/ # directory wsl whith ansible files
+    dir_vagrant: /mnt/d/VBox_Projects/mysql/ # directory wsl whith vagrant files
+
+    mysql_pass: myP@ss!w0rd
+    repl_user: repl
+    repl_pass: replP@ss!w0rd
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+
+vms:
+    hosts:
+        master:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2250
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            comment: '#'
+            server_id: 1
+        slave:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2251
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"
+            comment: ''
+            server_id: 2
