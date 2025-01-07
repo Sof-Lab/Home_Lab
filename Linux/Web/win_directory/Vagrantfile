@@ -11,16 +11,16 @@ Vagrant.configure(2) do |config|
 			v.memory = "2048"
 			v.cpus = "2"
 			v.gui = false
-      v.customize ["modifyvm", :id, '--audio', 'none']
+			v.customize ["modifyvm", :id, '--audio', 'none']
 		end
-    web.vm.network "forwarded_port", guest: 8081, host: 8081
-    web.vm.network "forwarded_port", guest: 8082, host: 8082
-    web.vm.network "forwarded_port", guest: 8083, host: 8083
-	web.vm.network "forwarded_port", # дополнительный проброс порта для доступа к ВМ из WSL
-		auto_correct: true,
-		guest: 22,
-		host: 2252, # Порт для подключения по ssh
-		host_ip: "192.168.1.8", # Ip-адрес Windows-хоста
-		id: "ssh-for-wsl"
-  end
+		web.vm.network "forwarded_port", guest: 8081, host: 8081
+		web.vm.network "forwarded_port", guest: 8082, host: 8082
+		web.vm.network "forwarded_port", guest: 8083, host: 8083
+		web.vm.network "forwarded_port", # дополнительный проброс порта для доступа к ВМ из WSL
+			auto_correct: true,
+			guest: 22,
+			host: 2252, # Порт для подключения по ssh
+			host_ip: "192.168.1.8", # Ip-адрес Windows-хоста
+			id: "ssh-for-wsl"
+	end
 end
