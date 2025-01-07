@@ -1,0 +1,18 @@
+
+all:
+  vars:
+    host_ip: 192.168.1.8 # windows host ip
+    dir_wsl: /home/sof/otus_labs/web/ # directory wsl whith ansible files
+    dir_vagrant: /mnt/d/VBox_Projects/web/ # directory wsl whith vagrant files
+
+localhost:
+    hosts:
+        wsl:
+            ansible_host: 127.0.0.1
+            ansible_connection: local
+vms:
+    hosts:
+        web:
+            ansible_host: "{{ host_ip }}"
+            ansible_port: 2252
+            ansible_private_key_file: "{{ 'certs/' + inventory_hostname + '/private_key' }}"

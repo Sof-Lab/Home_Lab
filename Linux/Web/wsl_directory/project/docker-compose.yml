@@ -1,0 +1,90 @@
+version: '2'
+
+services:
+
+  mariadb:
+    image: mariadb:10.6.4-focal
+    container_name: mariadb
+    restart: no
+    networks:
+      - proj
+    expose:
+      - "3306"
+    env_file:
+      - .env
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIA_ROOT_PASS}
+      - MARIADB_DATABASE=${WP_DB_NAME}
+      - MARIADB_USER=${WP_DB_USER}
+      - MARIADB_PASSWORD=${WP_DB_PASS}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:6.7.1-fpm-alpine
+    container_name: wordpress
+    restart: no
+    networks:
+      - proj
+    env_file:
+      - .env
+    environment:
+      - WORDPRESS_DB_HOST=mariadb
+      - WORDPRESS_DB_NAME=${WP_DB_NAME}
+      - WORDPRESS_DB_USER=${WP_DB_USER}
+      - WORDPRESS_DB_PASSWORD=${WP_DB_PASS}
+    volumes:
+      - wp_data:/var/www/html
+    depends_on:
+      - mariadb
+
+  nginx:
+    image: nginx:stable
+    container_name: nginx
+    restart: no
+    networks:
+      - proj
+    ports:
+      - "8081:8081"
+      - "8082:8082"
+      - "8083:8083"
+    volumes:
+      - wp_data:/var/www/html
+      - ./nginx-conf:/etc/nginx/conf.d:ro
+    depends_on:
+      - wordpress
+      - node
+      - app
+
+  node:
+    image: node:23-alpine3.20
+    container_name: node
+    restart: no
+    networks:
+      - proj
+    expose:
+      - "3000"
+    working_dir: /opt/server
+    volumes:
+      - ./node:/opt/server:ro
+    command: node test.js
+
+  app:
+    build: ./python
+    container_name: app
+    restart: no
+    networks:
+      - proj
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    command: "gunicorn --workers=2 --bind=0.0.0.0:8000 mysite.wsgi:application"
+
+networks:
+  proj:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  wp_data:

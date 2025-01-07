@@ -1,0 +1,95 @@
+---
+- name: WSL localhost copy private_key
+  hosts: wsl
+  become: false
+  tasks:
+
+    - name: Create directory for private_key
+      file:
+        path: "{{ dir_wsl + 'certs/' + item }}"
+        state: directory
+      loop: "{{ query('inventory_hostnames', 'vms') }}"
+
+    - name: Copy private_key file
+      copy:
+        src: "{{ dir_vagrant + '/.vagrant/machines/' + item + '/virtualbox/private_key' }}"
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+      loop: "{{ query('inventory_hostnames', 'vms') }}"
+
+    - name: Change permissions for private_key
+      file:
+        dest: "{{ dir_wsl + 'certs/' + item + '/private_key' }}"
+        mode: 0400
+      loop: "{{ query('inventory_hostnames', 'vms') }}"
+
+
+- name: Configure Dynamic Web
+  hosts: vms
+  gather_facts: false
+  become: true
+  tasks:
+
+    - name: Set timezone
+      timezone:
+        name: Europe/Moscow
+
+    - name: Install packeges
+      apt:
+        name:
+          - chrony
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: latest
+
+    - name: Add Docker s official GPG key
+      apt_key:
+        url: "https://download.docker.com/linux/ubuntu/gpg"
+        state: present
+
+    - name: Verify that we have the key with the fingerprint
+      apt_key:
+        id: 0EBFCD88
+        state: present
+
+    - name: Set up the stable repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+        state: present
+        update_cache: yes
+
+    - name: Update all
+      apt:
+        update_cache: yes
+
+    - name: Install docker
+      apt:
+        name: docker-ce
+        state: present
+        update_cache: yes
+
+    - name: Install docker-compose
+      get_url:
+        url : https://github.com/docker/compose/releases/download/v2.22.0/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: 0777
+
+    - name: Add remote "vagrant" user to "docker" group
+      user:
+        name: vagrant
+        group: "docker"
+        append: yes
+
+    - name: Copy project
+      copy:
+        src: project
+        dest: /home/vagrant
+
+    - name: reset ssh connection
+      meta: reset_connection
+
+    - name: Run container
+      shell:
+        cmd: "docker-compose up -d"
+        chdir: /home/vagrant/project
